@@ -746,3 +746,656 @@ inline icMatrix3x3 inverse(const icMatrix3x3& a) {
 	}
 	return tmp;
 }
+
+// start for class icMatrix4x4
+class icMatrix4x4
+{
+public:
+	inline icMatrix4x4();
+	inline icMatrix4x4(double d);
+	inline icMatrix4x4(const icMatrix4x4& a);
+	inline icMatrix4x4(const icVector4& v1, const icVector4& v2, const icVector4& v3, const icVector4& v4);
+	
+	inline icMatrix4x4(double m00, double m01, double m02, double m03,
+					   double m10, double m11, double m12, double m13,
+					   double m20, double m21, double m22, double m23,
+					   double m30, double m31, double m32, double m33);
+	inline icMatrix4x4(double m[4][4]);
+
+	inline icMatrix4x4& set(const double d);
+	inline icMatrix4x4& operator=(const double d);
+
+	inline icMatrix4x4& set(const icMatrix4x4& a);
+	inline icMatrix4x4& operator=(const icMatrix4x4& a);
+
+	inline icMatrix4x4& set(double m[4][4]);
+	inline icMatrix4x4& operator=(double m[4][4]);
+
+	inline icMatrix4x4& set(const icVector4& v1, const icVector4& v2, const icVector4& v3, const icVector4& v4);
+	inline icMatrix4x4& set(double m00, double m01, double m02, double m03,
+							double m10, double m11, double m12, double m13,
+							double m20, double m21, double m22, double m23,
+							double m30, double m31, double m32, double m33);
+
+	inline int operator!=(const icMatrix4x4& a)const;
+	inline int operator==(const icMatrix4x4& a)const;
+	inline int operator!=(double d)const;
+	inline int operator==(double d)const;
+
+	inline icMatrix4x4& operator+=(double d);
+	inline icMatrix4x4& operator-=(double d);
+	inline icMatrix4x4& operator*=(double d);
+
+	inline icMatrix4x4& operator+=(const icMatrix4x4& a);
+	inline icMatrix4x4& operator-=(const icMatrix4x4& a);
+	inline icMatrix4x4& operator*=(const icMatrix4x4& a);
+	
+	// Left : this = that x this
+	// Right: this = this x that
+	icMatrix4x4& leftMultiply(const icMatrix4x4& that);
+	icMatrix4x4& rightMultiply(const icMatrix4x4& that);
+
+	inline icMatrix4x4& setIdentity();
+
+public:
+	double entry[4][4];
+
+};
+
+inline icMatrix4x4 operator+(const icMatrix4x4& a, double b);
+inline icMatrix4x4 operator-(const icMatrix4x4& a, double b);
+inline icMatrix4x4 operator*(const icMatrix4x4& a, double b);
+
+inline icMatrix4x4 operator+(const icMatrix4x4& a, const icMatrix4x4& b);
+inline icMatrix4x4 operator-(const icMatrix4x4& a, const icMatrix4x4& b);
+inline icMatrix4x4 operator*(const icMatrix4x4& a, const icMatrix4x4& b);
+
+inline icMatrix4x4 multiply(const icMatrix4x4& a, const icMatrix4x4& b);
+inline icMatrix4x4 conjugate(const icMatrix4x4& a, const icMatrix4x4& b);
+inline icMatrix4x4 othoconjugate(const icMatrix4x4& a, const icMatrix4x4& b);
+inline icVector4   operator*(const icMatrix4x4& a, const icVector4& b);
+inline icVector4   operator*(const icVector4& a, const icMatrix4x4& b);
+
+inline double determinant(const icMatrix4x4& a);
+
+inline icMatrix4x4 transpose(const icMatrix4x4& a);
+inline icMatrix4x4   inverse(const icMatrix4x4& a);
+
+inline icMatrix4x4::icMatrix4x4() 
+{
+	entry[0][0] = 1;
+	entry[0][1] = 0;
+	entry[0][2] = 0;
+	entry[0][3] = 0;
+	entry[1][0] = 0;
+	entry[1][1] = 1;
+	entry[1][2] = 0;
+	entry[1][3] = 0;
+	entry[2][0] = 0;
+	entry[2][1] = 0;
+	entry[2][2] = 1;
+	entry[2][3] = 0;
+	entry[3][0] = 0;
+	entry[3][1] = 0;
+	entry[3][2] = 0;
+	entry[3][3] = 1;
+}
+
+inline icMatrix4x4::icMatrix4x4(double d)
+{
+	entry[0][0] = d;
+	entry[0][1] = d;
+	entry[0][2] = d;
+	entry[0][3] = d;
+	entry[1][0] = d;
+	entry[1][1] = d;
+	entry[1][2] = d;
+	entry[1][3] = d;
+	entry[2][0] = d;
+	entry[2][1] = d;
+	entry[2][2] = d;
+	entry[2][3] = d;
+	entry[3][0] = d;
+	entry[3][1] = d;
+	entry[3][2] = d;
+	entry[3][3] = d;
+}
+
+inline icMatrix4x4::icMatrix4x4(double m00, double m01, double m02, double m03,
+								double m10, double m11, double m12, double m13,
+								double m20, double m21, double m22, double m23,
+								double m30, double m31, double m32, double m33)
+{
+	entry[0][0] = m00;
+	entry[0][1] = m01;
+	entry[0][2] = m02;
+	entry[0][3] = m03;
+	entry[1][0] = m10;
+	entry[1][1] = m11;
+	entry[1][2] = m12;
+	entry[1][3] = m13;
+	entry[2][0] = m20;
+	entry[2][1] = m21;
+	entry[2][2] = m22;
+	entry[2][3] = m23;
+	entry[3][0] = m30;
+	entry[3][1] = m31;
+	entry[3][2] = m32;
+	entry[3][3] = m33;
+}
+
+inline icMatrix4x4::icMatrix4x4(const icMatrix4x4& a)
+{
+	entry[0][0] = a.entry[0][0];
+	entry[0][1] = a.entry[0][1];
+	entry[0][2] = a.entry[0][2];
+	entry[0][3] = a.entry[0][3];
+	entry[1][0] = a.entry[1][0];
+	entry[1][1] = a.entry[1][1];
+	entry[1][2] = a.entry[1][2];
+	entry[1][3] = a.entry[1][3];
+	entry[2][0] = a.entry[2][0];
+	entry[2][1] = a.entry[2][1];
+	entry[2][2] = a.entry[2][2];
+	entry[2][3] = a.entry[2][3];
+	entry[3][0] = a.entry[3][0];
+	entry[3][1] = a.entry[3][1];
+	entry[3][2] = a.entry[3][2];
+	entry[3][3] = a.entry[3][3];
+}
+
+inline icMatrix4x4::icMatrix4x4(const icVector4& v1, const icVector4& v2, const icVector4& v3, const icVector4& v4)
+{
+	entry[0][0] = v1.entry[0];
+	entry[0][1] = v1.entry[1];
+	entry[0][2] = v1.entry[2];
+	entry[0][3] = v1.entry[3];
+	entry[1][0] = v2.entry[0];
+	entry[1][1] = v2.entry[1];
+	entry[1][2] = v2.entry[2];
+	entry[1][3] = v2.entry[3];
+	entry[2][0] = v3.entry[0];
+	entry[2][1] = v3.entry[1];
+	entry[2][2] = v3.entry[2];
+	entry[2][3] = v3.entry[3];
+	entry[3][0] = v4.entry[0];
+	entry[3][1] = v4.entry[1];
+	entry[3][2] = v4.entry[2];
+	entry[3][3] = v4.entry[3];
+}
+
+inline icMatrix4x4& icMatrix4x4::set(const double d)
+{
+	return (*this) = d;
+}
+
+inline icMatrix4x4& icMatrix4x4::operator=(const double d)
+{
+	entry[0][0] = d;
+	entry[0][1] = d;
+	entry[0][2] = d;
+	entry[0][3] = d;
+	entry[1][0] = d;
+	entry[1][1] = d;
+	entry[1][2] = d;
+	entry[1][3] = d;
+	entry[2][0] = d;
+	entry[2][1] = d;
+	entry[2][2] = d;
+	entry[2][3] = d;
+	entry[3][0] = d;
+	entry[3][1] = d;
+	entry[3][2] = d;
+	entry[3][3] = d;
+
+	return (*this);
+}
+
+inline icMatrix4x4& icMatrix4x4::set(const icMatrix4x4& a)
+{
+	return (*this) = a;
+}
+
+inline icMatrix4x4& icMatrix4x4::operator=(const icMatrix4x4& a)
+{
+	entry[0][0] = a.entry[0][0];
+	entry[0][1] = a.entry[0][1];
+	entry[0][2] = a.entry[0][2];
+	entry[0][3] = a.entry[0][3];
+	entry[1][0] = a.entry[1][0];
+	entry[1][1] = a.entry[1][1];
+	entry[1][2] = a.entry[1][2];
+	entry[1][3] = a.entry[1][3];
+	entry[2][0] = a.entry[2][0];
+	entry[2][1] = a.entry[2][1];
+	entry[2][2] = a.entry[2][2];
+	entry[2][3] = a.entry[2][3];
+	entry[3][0] = a.entry[3][0];
+	entry[3][1] = a.entry[3][1];
+	entry[3][2] = a.entry[3][2];
+	entry[3][3] = a.entry[3][3];
+
+	return (*this);
+}
+
+inline icMatrix4x4& icMatrix4x4::set(double m[4][4])
+{
+	return (*this) = m;
+}
+
+inline icMatrix4x4& icMatrix4x4::operator=(double m[4][4])
+{
+	entry[0][0] = m[0][0];
+	entry[0][1] = m[0][1];
+	entry[0][2] = m[0][2];
+	entry[0][3] = m[0][3];
+	entry[1][0] = m[1][0];
+	entry[1][1] = m[1][1];
+	entry[1][2] = m[1][2];
+	entry[1][3] = m[1][3];
+	entry[2][0] = m[2][0];
+	entry[2][1] = m[2][1];
+	entry[2][2] = m[2][2];
+	entry[2][3] = m[2][3];
+	entry[3][0] = m[3][0];
+	entry[3][1] = m[3][1];
+	entry[3][2] = m[3][2];
+	entry[3][3] = m[3][3];
+
+	return (*this);
+}
+
+inline icMatrix4x4& icMatrix4x4::set(const icVector4& v1, const icVector4& v2, const icVector4& v3, const icVector4& v4)
+{
+	entry[0][0] = v1.entry[0];
+	entry[0][1] = v1.entry[1];
+	entry[0][2] = v1.entry[2];
+	entry[0][3] = v1.entry[3];
+	entry[1][0] = v2.entry[0];
+	entry[1][1] = v2.entry[1];
+	entry[1][2] = v2.entry[2];
+	entry[1][3] = v2.entry[3];
+	entry[2][0] = v3.entry[0];
+	entry[2][1] = v3.entry[1];
+	entry[2][2] = v3.entry[2];
+	entry[2][3] = v3.entry[3];
+	entry[3][0] = v4.entry[0];
+	entry[3][1] = v4.entry[1];
+	entry[3][2] = v4.entry[2];
+	entry[3][3] = v4.entry[3];
+
+	return (*this);
+}
+
+inline icMatrix4x4& icMatrix4x4::set(double m00, double m01, double m02, double m03,
+									 double m10, double m11, double m12, double m13,
+									 double m20, double m21, double m22, double m23,
+									 double m30, double m31, double m32, double m33)
+{
+	entry[0][0] = m00;
+	entry[0][1] = m01;
+	entry[0][2] = m02;
+	entry[0][3] = m03;
+	entry[1][0] = m10;
+	entry[1][1] = m11;
+	entry[1][2] = m12;
+	entry[1][3] = m13;
+	entry[2][0] = m20;
+	entry[2][1] = m21;
+	entry[2][2] = m22;
+	entry[2][3] = m23;
+	entry[3][0] = m30;
+	entry[3][1] = m31;
+	entry[3][2] = m32;
+	entry[3][3] = m33;
+
+	return (*this);
+}
+
+inline int icMatrix4x4::operator!=(const icMatrix4x4& a)const
+{
+	return
+	(
+		(entry[0][0] != a.entry[0][0]) || (entry[0][1] != a.entry[0][1]) || (entry[0][2] != a.entry[0][2]) || (entry[0][3] != a.entry[0][3]) ||
+		(entry[1][0] != a.entry[1][0]) || (entry[1][1] != a.entry[1][1]) || (entry[1][2] != a.entry[1][2]) || (entry[1][3] != a.entry[1][3]) ||
+		(entry[2][0] != a.entry[2][0]) || (entry[2][1] != a.entry[2][1]) || (entry[2][2] != a.entry[2][2]) || (entry[2][3] != a.entry[2][3]) ||
+		(entry[3][0] != a.entry[3][0]) || (entry[3][1] != a.entry[3][1]) || (entry[3][2] != a.entry[3][2]) || (entry[3][3] != a.entry[3][3])
+	);
+}
+
+inline int icMatrix4x4::operator==(const icMatrix4x4& a)const
+{
+	return
+	(
+		(entry[0][0] == a.entry[0][0]) && (entry[0][1] == a.entry[0][1]) && (entry[0][2] == a.entry[0][2]) && (entry[0][3] == a.entry[0][3]) &&
+		(entry[1][0] == a.entry[1][0]) && (entry[1][1] == a.entry[1][1]) && (entry[1][2] == a.entry[1][2]) && (entry[1][3] == a.entry[1][3]) &&
+		(entry[2][0] == a.entry[2][0]) && (entry[2][1] == a.entry[2][1]) && (entry[2][2] == a.entry[2][2]) && (entry[2][3] == a.entry[2][3]) &&
+		(entry[3][0] == a.entry[3][0]) && (entry[3][1] == a.entry[3][1]) && (entry[3][2] == a.entry[3][2]) && (entry[3][3] == a.entry[3][3])
+	);
+}
+
+inline int icMatrix4x4::operator!=(double d)const
+{
+	return
+	(
+		(entry[0][0] == d) && (entry[0][1] == d) && (entry[0][2] == d) && (entry[0][3] == d) &&
+		(entry[1][0] == d) && (entry[1][1] == d) && (entry[1][2] == d) && (entry[1][3] == d) &&
+		(entry[2][0] == d) && (entry[2][1] == d) && (entry[2][2] == d) && (entry[2][3] == d) &&
+		(entry[3][0] == d) && (entry[3][1] == d) && (entry[3][2] == d) && (entry[3][3] == d)
+	);
+}
+
+inline int icMatrix4x4::operator==(double d)const
+{
+	return
+	(
+		(entry[0][0] != d) || (entry[0][1] != d) || (entry[0][2] != d) || (entry[0][3] != d) ||
+		(entry[1][0] != d) || (entry[1][1] != d) || (entry[1][2] != d) || (entry[1][3] != d) ||
+		(entry[2][0] != d) || (entry[2][1] != d) || (entry[2][2] != d) || (entry[2][3] != d) ||
+		(entry[3][0] != d) || (entry[3][1] != d) || (entry[3][2] != d) || (entry[3][3] != d)
+	);
+}
+
+inline icMatrix4x4& icMatrix4x4::operator+=(double d)
+{
+	entry[0][0] += d; entry[0][1] += d; entry[0][2] += d; entry[0][3] += d;
+	entry[1][0] += d; entry[1][1] += d; entry[1][2] += d; entry[1][3] += d;
+	entry[2][0] += d; entry[2][1] += d; entry[2][2] += d; entry[2][3] += d;
+	entry[3][0] += d; entry[3][1] += d;	entry[3][2] += d; entry[3][3] += d;
+	return (*this);
+}
+
+inline icMatrix4x4& icMatrix4x4::operator-=(double d)
+{
+	entry[0][0] -= d; entry[0][1] -= d; entry[0][2] -= d; entry[0][3] -= d;
+	entry[1][0] -= d; entry[1][1] -= d; entry[1][2] -= d; entry[1][3] -= d;
+	entry[2][0] -= d; entry[2][1] -= d; entry[2][2] -= d; entry[2][3] -= d;
+	entry[3][0] -= d; entry[3][1] -= d;	entry[3][2] -= d; entry[3][3] -= d;
+	return (*this);
+}
+
+inline icMatrix4x4& icMatrix4x4::operator*=(double d)
+{
+	entry[0][0] *= d; entry[0][1] *= d; entry[0][2] *= d; entry[0][3] *= d;
+	entry[1][0] *= d; entry[1][1] *= d; entry[1][2] *= d; entry[1][3] *= d;
+	entry[2][0] *= d; entry[2][1] *= d; entry[2][2] *= d; entry[2][3] *= d;
+	entry[3][0] *= d; entry[3][1] *= d;	entry[3][2] *= d; entry[3][3] *= d;
+	return (*this);
+}
+
+inline icMatrix4x4& icMatrix4x4::operator+=(const icMatrix4x4& a)
+{
+	entry[0][0] += a.entry[0][0]; entry[0][1] += a.entry[0][1]; entry[0][2] += a.entry[0][2]; entry[0][3] += a.entry[0][3];
+	entry[1][0] += a.entry[1][0]; entry[1][1] += a.entry[1][1]; entry[1][2] += a.entry[1][2]; entry[1][3] += a.entry[1][3];
+	entry[2][0] += a.entry[2][0]; entry[2][1] += a.entry[2][1]; entry[2][2] += a.entry[2][2]; entry[2][3] += a.entry[2][3];
+	entry[3][0] += a.entry[3][0]; entry[3][1] += a.entry[3][1];	entry[3][2] += a.entry[3][2]; entry[3][3] += a.entry[3][3];
+	return (*this);
+}
+
+inline icMatrix4x4& icMatrix4x4::operator-=(const icMatrix4x4& a)
+{
+	entry[0][0] -= a.entry[0][0]; entry[0][1] -= a.entry[0][1]; entry[0][2] -= a.entry[0][2]; entry[0][3] -= a.entry[0][3];
+	entry[1][0] -= a.entry[1][0]; entry[1][1] -= a.entry[1][1]; entry[1][2] -= a.entry[1][2]; entry[1][3] -= a.entry[1][3];
+	entry[2][0] -= a.entry[2][0]; entry[2][1] -= a.entry[2][1]; entry[2][2] -= a.entry[2][2]; entry[2][3] -= a.entry[2][3];
+	entry[3][0] -= a.entry[3][0]; entry[3][1] -= a.entry[3][1];	entry[3][2] -= a.entry[3][2]; entry[3][3] -= a.entry[3][3];
+	return (*this);
+}
+
+inline icMatrix4x4& icMatrix4x4::operator*=(const icMatrix4x4& a)
+{
+	entry[0][0] *= a.entry[0][0]; entry[0][1] *= a.entry[0][1]; entry[0][2] *= a.entry[0][2]; entry[0][3] *= a.entry[0][3];
+	entry[1][0] *= a.entry[1][0]; entry[1][1] *= a.entry[1][1]; entry[1][2] *= a.entry[1][2]; entry[1][3] *= a.entry[1][3];
+	entry[2][0] *= a.entry[2][0]; entry[2][1] *= a.entry[2][1]; entry[2][2] *= a.entry[2][2]; entry[2][3] *= a.entry[2][3];
+	entry[3][0] *= a.entry[3][0]; entry[3][1] *= a.entry[3][1];	entry[3][2] *= a.entry[3][2]; entry[3][3] *= a.entry[3][3];
+	return (*this);
+}
+
+icMatrix4x4& icMatrix4x4::rightMultiply(const icMatrix4x4& that)
+{
+	icMatrix4x4 tmp(entry[0][0], entry[0][1], entry[0][2], entry[0][3],
+					entry[1][0], entry[1][1], entry[1][2], entry[1][3],
+					entry[2][0], entry[2][1], entry[2][2], entry[2][3],
+					entry[3][0], entry[3][1], entry[3][2], entry[3][3]);
+
+	entry[0][0] = tmp.entry[0][0] * that.entry[0][0] + tmp.entry[0][1] * that.entry[1][0] + tmp.entry[0][2] * that.entry[2][0] + tmp.entry[0][3] * that.entry[3][0];
+	entry[0][1] = tmp.entry[0][0] * that.entry[0][1] + tmp.entry[0][1] * that.entry[1][1] + tmp.entry[0][2] * that.entry[2][1] + tmp.entry[0][3] * that.entry[3][1];
+	entry[0][2] = tmp.entry[0][0] * that.entry[0][2] + tmp.entry[0][1] * that.entry[1][2] + tmp.entry[0][2] * that.entry[2][2] + tmp.entry[0][3] * that.entry[3][2];
+	entry[0][3] = tmp.entry[0][0] * that.entry[0][3] + tmp.entry[0][1] * that.entry[1][3] + tmp.entry[0][2] * that.entry[2][3] + tmp.entry[0][3] * that.entry[3][3];
+
+	entry[1][0] = tmp.entry[1][0] * that.entry[0][0] + tmp.entry[1][1] * that.entry[1][0] + tmp.entry[1][2] * that.entry[2][0] + tmp.entry[1][3] * that.entry[3][0];
+	entry[1][1] = tmp.entry[1][0] * that.entry[0][1] + tmp.entry[1][1] * that.entry[1][1] + tmp.entry[1][2] * that.entry[2][1] + tmp.entry[1][3] * that.entry[3][1];
+	entry[1][2] = tmp.entry[1][0] * that.entry[0][2] + tmp.entry[1][1] * that.entry[1][2] + tmp.entry[1][2] * that.entry[2][2] + tmp.entry[1][3] * that.entry[3][2];
+	entry[1][3] = tmp.entry[1][0] * that.entry[0][3] + tmp.entry[1][1] * that.entry[1][3] + tmp.entry[1][2] * that.entry[2][3] + tmp.entry[1][3] * that.entry[3][3];
+
+	entry[2][0] = tmp.entry[2][0] * that.entry[0][0] + tmp.entry[2][1] * that.entry[1][0] + tmp.entry[2][2] * that.entry[2][0] + tmp.entry[2][3] * that.entry[3][0];
+	entry[2][1] = tmp.entry[2][0] * that.entry[0][1] + tmp.entry[2][1] * that.entry[1][1] + tmp.entry[2][2] * that.entry[2][1] + tmp.entry[2][3] * that.entry[3][1];
+	entry[2][2] = tmp.entry[2][0] * that.entry[0][2] + tmp.entry[2][1] * that.entry[1][2] + tmp.entry[2][2] * that.entry[2][2] + tmp.entry[2][3] * that.entry[3][2];
+	entry[2][3] = tmp.entry[2][0] * that.entry[0][3] + tmp.entry[2][1] * that.entry[1][3] + tmp.entry[2][2] * that.entry[2][3] + tmp.entry[2][3] * that.entry[3][3];
+
+	entry[3][0] = tmp.entry[3][0] * that.entry[0][0] + tmp.entry[3][1] * that.entry[1][0] + tmp.entry[3][2] * that.entry[2][0] + tmp.entry[3][3] * that.entry[3][0];
+	entry[3][1] = tmp.entry[3][0] * that.entry[0][1] + tmp.entry[3][1] * that.entry[1][1] + tmp.entry[3][2] * that.entry[2][1] + tmp.entry[3][3] * that.entry[3][1];
+	entry[3][2] = tmp.entry[3][0] * that.entry[0][2] + tmp.entry[3][1] * that.entry[1][2] + tmp.entry[3][2] * that.entry[2][2] + tmp.entry[3][3] * that.entry[3][2];
+	entry[3][3] = tmp.entry[3][0] * that.entry[0][3] + tmp.entry[3][1] * that.entry[1][3] + tmp.entry[3][2] * that.entry[2][3] + tmp.entry[3][3] * that.entry[3][3];
+	
+	return(*this);
+}
+
+icMatrix4x4& icMatrix4x4::leftMultiply(const icMatrix4x4& that)
+{
+	icMatrix4x4 tmp(entry[0][0], entry[0][1], entry[0][2], entry[0][3],
+					entry[1][0], entry[1][1], entry[1][2], entry[1][3],
+					entry[2][0], entry[2][1], entry[2][2], entry[2][3],
+					entry[3][0], entry[3][1], entry[3][2], entry[3][3]);
+
+	entry[0][0] = that.entry[0][0] * tmp.entry[0][0] + that.entry[0][1] * tmp.entry[1][0] + that.entry[0][2] * tmp.entry[2][0] + that.entry[0][3] * tmp.entry[3][0];
+	entry[0][1] = that.entry[0][0] * tmp.entry[0][1] + that.entry[0][1] * tmp.entry[1][1] + that.entry[0][2] * tmp.entry[2][1] + that.entry[0][3] * tmp.entry[3][1];
+	entry[0][2] = that.entry[0][0] * tmp.entry[0][2] + that.entry[0][1] * tmp.entry[1][2] + that.entry[0][2] * tmp.entry[2][2] + that.entry[0][3] * tmp.entry[3][2];
+	entry[0][3] = that.entry[0][0] * tmp.entry[0][3] + that.entry[0][1] * tmp.entry[1][3] + that.entry[0][2] * tmp.entry[2][3] + that.entry[0][3] * tmp.entry[3][3];
+
+	entry[1][0] = that.entry[1][0] * tmp.entry[0][0] + that.entry[1][1] * tmp.entry[1][0] + that.entry[1][2] * tmp.entry[2][0] + that.entry[1][3] * tmp.entry[3][0];
+	entry[1][1] = that.entry[1][0] * tmp.entry[0][1] + that.entry[1][1] * tmp.entry[1][1] + that.entry[1][2] * tmp.entry[2][1] + that.entry[1][3] * tmp.entry[3][1];
+	entry[1][2] = that.entry[1][0] * tmp.entry[0][2] + that.entry[1][1] * tmp.entry[1][2] + that.entry[1][2] * tmp.entry[2][2] + that.entry[1][3] * tmp.entry[3][2];
+	entry[1][3] = that.entry[1][0] * tmp.entry[0][3] + that.entry[1][1] * tmp.entry[1][3] + that.entry[1][2] * tmp.entry[2][3] + that.entry[1][3] * tmp.entry[3][3];
+
+	entry[2][0] = that.entry[2][0] * tmp.entry[0][0] + that.entry[2][1] * tmp.entry[1][0] + that.entry[2][2] * tmp.entry[2][0] + that.entry[2][3] * tmp.entry[3][0];
+	entry[2][1] = that.entry[2][0] * tmp.entry[0][1] + that.entry[2][1] * tmp.entry[1][1] + that.entry[2][2] * tmp.entry[2][1] + that.entry[2][3] * tmp.entry[3][1];
+	entry[2][2] = that.entry[2][0] * tmp.entry[0][2] + that.entry[2][1] * tmp.entry[1][2] + that.entry[2][2] * tmp.entry[2][2] + that.entry[2][3] * tmp.entry[3][2];
+	entry[2][3] = that.entry[2][0] * tmp.entry[0][3] + that.entry[2][1] * tmp.entry[1][3] + that.entry[2][2] * tmp.entry[2][3] + that.entry[2][3] * tmp.entry[3][3];
+
+	entry[3][0] = that.entry[3][0] * tmp.entry[0][0] + that.entry[3][1] * tmp.entry[1][0] + that.entry[3][2] * tmp.entry[2][0] + that.entry[3][3] * tmp.entry[3][0];
+	entry[3][1] = that.entry[3][0] * tmp.entry[0][1] + that.entry[3][1] * tmp.entry[1][1] + that.entry[3][2] * tmp.entry[2][1] + that.entry[3][3] * tmp.entry[3][1];
+	entry[3][2] = that.entry[3][0] * tmp.entry[0][2] + that.entry[3][1] * tmp.entry[1][2] + that.entry[3][2] * tmp.entry[2][2] + that.entry[3][3] * tmp.entry[3][2];
+	entry[3][3] = that.entry[3][0] * tmp.entry[0][3] + that.entry[3][1] * tmp.entry[1][3] + that.entry[3][2] * tmp.entry[2][3] + that.entry[3][3] * tmp.entry[3][3];
+	
+	return(*this);
+}
+
+inline icMatrix4x4& icMatrix4x4::setIdentity() 
+{
+	entry[0][0] = 1; entry[0][1] = 0; entry[0][2] = 0; entry[0][3] = 0;
+	entry[1][0] = 0; entry[1][1] = 1; entry[1][2] = 0; entry[1][3] = 0;
+	entry[2][0] = 0; entry[2][1] = 0; entry[2][2] = 1; entry[2][3] = 0;
+	entry[3][0] = 0; entry[3][1] = 0; entry[3][2] = 0; entry[3][3] = 1;
+	return (*this);
+}
+
+inline icMatrix4x4 operator+(const icMatrix4x4& a, double b)
+{
+	return (icMatrix4x4(a) += b);
+}
+
+inline icMatrix4x4 operator-(const icMatrix4x4& a, double b)
+{
+	return (icMatrix4x4(a) -= b);
+}
+
+inline icMatrix4x4 operator*(const icMatrix4x4& a, double b)
+{
+	return (icMatrix4x4(a) *= b);
+}
+
+inline icMatrix4x4 operator+(double a, const icMatrix4x4& b)
+{
+	return b + a;
+}
+
+inline icMatrix4x4 operator-(double a, const icMatrix4x4& b)
+{
+	return icMatrix4x4(a - b.entry[0][0], a - b.entry[0][1], a - b.entry[0][2], a - b.entry[0][3],
+					   a - b.entry[1][0], a - b.entry[1][1], a - b.entry[1][2], a - b.entry[1][3],
+					   a - b.entry[2][0], a - b.entry[2][1], a - b.entry[2][2], a - b.entry[2][3],
+					   a - b.entry[3][0], a - b.entry[3][1], a - b.entry[3][2], a - b.entry[3][3]);
+}
+
+inline icMatrix4x4 operator*(double a, const icMatrix4x4& b)
+{
+	return (b * a);
+}
+
+inline icMatrix4x4 operator+(const icMatrix4x4& a, const icMatrix4x4& b)
+{
+	return (icMatrix4x4(a) += b);
+}
+
+inline icMatrix4x4 operator-(const icMatrix4x4& a, const icMatrix4x4& b)
+{
+	return (icMatrix4x4(a) -= b);
+}
+
+inline icMatrix4x4 operator*(const icMatrix4x4& a, const icMatrix4x4& b)
+{
+	return (icMatrix4x4(a) *= b);
+}
+
+inline icMatrix4x4 multiply(const icMatrix4x4& a, const icMatrix4x4& b)
+{
+	icMatrix4x4 tmp(a);
+	tmp.rightMultiply(b);
+	return tmp;
+}
+
+inline icMatrix4x4 conjugate(const icMatrix4x4& a, const icMatrix4x4& b)
+{
+	icMatrix4x4 tmp(a);
+	icMatrix4x4 c = inverse(b);
+	tmp.rightMultiply(b);
+	tmp.leftMultiply(c);
+	return tmp;
+}
+
+inline icMatrix4x4 othoconjugate(const icMatrix4x4& a, const icMatrix4x4& b)
+{
+	icMatrix4x4 tmp(a);
+	icMatrix4x4 c = transpose(b);
+	tmp.rightMultiply(b);
+	tmp.leftMultiply(c);
+	return tmp;
+}
+
+inline icVector4 operator*(const icMatrix4x4& a, const icVector4& b)
+{
+	return icVector4(b.entry[0] * a.entry[0][0] + b.entry[1] * a.entry[0][1] + b.entry[2] * a.entry[0][2] + b.entry[3] * a.entry[0][3],
+					 b.entry[0] * a.entry[1][0] + b.entry[1] * a.entry[1][1] + b.entry[2] * a.entry[1][2] + b.entry[3] * a.entry[1][3],
+					 b.entry[0] * a.entry[2][0] + b.entry[1] * a.entry[2][1] + b.entry[2] * a.entry[2][2] + b.entry[3] * a.entry[2][3],
+					 b.entry[0] * a.entry[3][0] + b.entry[1] * a.entry[3][1] + b.entry[2] * a.entry[3][2] + b.entry[3] * a.entry[3][3]);
+}
+
+inline icVector4 operator*(const icVector4& a, const icMatrix4x4& b)
+{
+	return icVector4(a.entry[0] * b.entry[0][0] + a.entry[1] * b.entry[1][0] + a.entry[2] * b.entry[2][0] + a.entry[3] * b.entry[3][0],
+					 a.entry[0] * b.entry[0][1] + a.entry[1] * b.entry[1][1] + a.entry[2] * b.entry[2][1] + a.entry[3] * b.entry[3][1],
+					 a.entry[0] * b.entry[0][2] + a.entry[1] * b.entry[1][2] + a.entry[2] * b.entry[2][2] + a.entry[3] * b.entry[3][2],
+					 a.entry[0] * b.entry[0][3] + a.entry[1] * b.entry[1][3] + a.entry[2] * b.entry[2][3] + a.entry[3] * b.entry[3][3]);
+}
+
+inline double determinant(const icMatrix4x4& a)
+{
+	icMatrix3x3 msub0(a.entry[1][1], a.entry[1][2], a.entry[1][3],
+					  a.entry[2][1], a.entry[2][2], a.entry[2][3],
+					  a.entry[3][1], a.entry[3][2], a.entry[3][3]);
+	icMatrix3x3 msub1(a.entry[1][0], a.entry[1][2], a.entry[1][3],
+					  a.entry[2][0], a.entry[2][2], a.entry[2][3],
+					  a.entry[3][0], a.entry[3][2], a.entry[3][3]);
+	icMatrix3x3 msub2(a.entry[1][0], a.entry[1][1], a.entry[1][3],
+					  a.entry[2][0], a.entry[2][1], a.entry[2][3],
+					  a.entry[3][0], a.entry[3][1], a.entry[3][3]);
+	icMatrix3x3 msub3(a.entry[1][0], a.entry[1][1], a.entry[1][2],
+					  a.entry[2][0], a.entry[2][1], a.entry[2][2],
+					  a.entry[3][0], a.entry[3][1], a.entry[3][2]);
+
+	return (a.entry[0][0] * determinant(msub0)) -
+		   (a.entry[0][1] * determinant(msub1)) +
+		   (a.entry[0][2] * determinant(msub2)) -
+		   (a.entry[0][3] * determinant(msub3));
+}
+
+inline icMatrix4x4 transpose(const icMatrix4x4& a)
+{
+	icMatrix4x4 tmp(a);
+	
+	tmp.entry[0][1] = a.entry[1][0];
+	tmp.entry[1][0] = a.entry[0][0];
+
+	tmp.entry[0][2] = a.entry[2][0];
+	tmp.entry[2][0] = a.entry[0][2];
+
+	tmp.entry[0][3] = a.entry[3][0];
+	tmp.entry[3][0] = a.entry[0][3];
+	
+	tmp.entry[1][2] = a.entry[2][1];
+	tmp.entry[2][1] = a.entry[1][2];
+
+	tmp.entry[1][3] = a.entry[3][1];
+	tmp.entry[3][1] = a.entry[1][3];
+
+	tmp.entry[2][3] = a.entry[3][2];
+	tmp.entry[3][2] = a.entry[2][3];
+
+	return tmp;
+}
+
+inline icMatrix4x4 inverse(const icMatrix4x4& a)
+{
+	icMatrix4x4 tmp;
+	double dmt = determinant(a);
+
+	if (dmt != 0.0)
+	{
+		tmp.entry[0][0] = (a.entry[1][1] * a.entry[2][2] * a.entry[3][3] + a.entry[1][2] * a.entry[2][3] * a.entry[3][1] + a.entry[1][3] * a.entry[2][1] * a.entry[3][2] -
+						   a.entry[1][3] * a.entry[2][2] * a.entry[3][1] - a.entry[1][2] * a.entry[2][1] * a.entry[3][3] - a.entry[1][1] * a.entry[2][3] * a.entry[3][2]) / dmt;
+		tmp.entry[0][1] = (a.entry[0][3] * a.entry[2][2] * a.entry[3][1] + a.entry[0][2] * a.entry[2][1] * a.entry[3][3] + a.entry[0][1] * a.entry[2][3] * a.entry[3][2] -
+						   a.entry[0][1] * a.entry[2][2] * a.entry[3][3] - a.entry[0][2] * a.entry[2][3] * a.entry[3][1] - a.entry[0][3] * a.entry[2][1] * a.entry[3][2]) / dmt;
+		tmp.entry[0][2] = (a.entry[0][1] * a.entry[1][2] * a.entry[3][3] + a.entry[0][2] * a.entry[1][3] * a.entry[3][1] + a.entry[0][3] * a.entry[1][1] * a.entry[3][2] -
+						   a.entry[0][3] * a.entry[1][2] * a.entry[3][1] - a.entry[0][2] * a.entry[1][1] * a.entry[3][3] - a.entry[0][1] * a.entry[1][3] * a.entry[3][2]) / dmt;
+		tmp.entry[0][3] = (a.entry[0][3] * a.entry[1][2] * a.entry[2][1] + a.entry[0][2] * a.entry[1][1] * a.entry[2][3] + a.entry[0][1] * a.entry[1][3] * a.entry[2][2] -
+						   a.entry[0][1] * a.entry[1][2] * a.entry[2][3] - a.entry[0][2] * a.entry[1][3] * a.entry[2][1] - a.entry[0][3] * a.entry[1][1] * a.entry[2][2]) / dmt;
+
+		tmp.entry[1][0] = (a.entry[1][3] * a.entry[2][2] * a.entry[3][0] + a.entry[1][2] * a.entry[2][0] * a.entry[3][3] + a.entry[1][0] * a.entry[2][3] * a.entry[3][2] -
+						   a.entry[1][0] * a.entry[2][2] * a.entry[3][3] - a.entry[1][2] * a.entry[2][3] * a.entry[3][0] - a.entry[1][3] * a.entry[2][0] * a.entry[3][2]) / dmt;
+		tmp.entry[1][1] = (a.entry[0][0] * a.entry[2][2] * a.entry[3][3] + a.entry[0][2] * a.entry[2][3] * a.entry[3][0] + a.entry[0][3] * a.entry[2][3] * a.entry[3][2] -
+						   a.entry[0][3] * a.entry[2][2] * a.entry[3][0] - a.entry[0][2] * a.entry[2][0] * a.entry[3][3] - a.entry[0][0] * a.entry[2][3] * a.entry[3][2]) / dmt;
+		tmp.entry[1][2] = (a.entry[0][3] * a.entry[1][2] * a.entry[3][0] + a.entry[0][2] * a.entry[1][0] * a.entry[3][3] + a.entry[0][0] * a.entry[1][3] * a.entry[3][2] -
+						   a.entry[0][0] * a.entry[1][2] * a.entry[3][3] - a.entry[0][2] * a.entry[1][3] * a.entry[3][0] - a.entry[0][3] * a.entry[1][0] * a.entry[3][2]) / dmt;
+		tmp.entry[1][3] = (a.entry[0][0] * a.entry[1][2] * a.entry[2][3] + a.entry[0][2] * a.entry[1][3] * a.entry[2][0] + a.entry[0][3] * a.entry[1][0] * a.entry[2][2] -
+						   a.entry[0][1] * a.entry[2][2] * a.entry[3][3] - a.entry[0][2] * a.entry[2][3] * a.entry[3][1] - a.entry[0][3] * a.entry[2][1] * a.entry[3][2]) / dmt;
+
+		tmp.entry[2][0] = (a.entry[1][0] * a.entry[2][1] * a.entry[3][3] + a.entry[1][1] * a.entry[2][3] * a.entry[3][0] + a.entry[1][3] * a.entry[2][0] * a.entry[3][1] -
+						   a.entry[1][3] * a.entry[2][1] * a.entry[3][0] - a.entry[1][1] * a.entry[2][0] * a.entry[3][3] - a.entry[1][0] * a.entry[3][2] * a.entry[3][1]) / dmt;
+		tmp.entry[2][1] = (a.entry[0][3] * a.entry[2][1] * a.entry[3][0] + a.entry[0][1] * a.entry[2][0] * a.entry[3][3] + a.entry[0][0] * a.entry[2][3] * a.entry[3][1] -
+						   a.entry[0][0] * a.entry[2][1] * a.entry[3][3] - a.entry[0][1] * a.entry[2][3] * a.entry[3][0] - a.entry[0][3] * a.entry[2][0] * a.entry[3][1]) / dmt;
+		tmp.entry[2][2] = (a.entry[0][0] * a.entry[1][1] * a.entry[3][3] + a.entry[0][1] * a.entry[1][3] * a.entry[3][0] + a.entry[0][3] * a.entry[1][0] * a.entry[3][1] -
+						   a.entry[0][3] * a.entry[1][1] * a.entry[3][0] - a.entry[0][1] * a.entry[1][0] * a.entry[3][3] - a.entry[0][0] * a.entry[1][3] * a.entry[3][1]) / dmt;
+		tmp.entry[2][3] = (a.entry[0][3] * a.entry[1][1] * a.entry[2][0] + a.entry[0][1] * a.entry[1][0] * a.entry[2][3] + a.entry[0][0] * a.entry[1][3] * a.entry[2][1] -
+						   a.entry[0][0] * a.entry[1][1] * a.entry[2][3] - a.entry[0][1] * a.entry[1][3] * a.entry[2][0] - a.entry[0][3] * a.entry[1][0] * a.entry[2][1]) / dmt;
+
+		tmp.entry[3][0] = (a.entry[1][2] * a.entry[2][1] * a.entry[3][0] + a.entry[1][1] * a.entry[2][0] * a.entry[3][2] + a.entry[1][0] * a.entry[2][2] * a.entry[3][1] -
+						   a.entry[1][0] * a.entry[2][1] * a.entry[3][2] - a.entry[1][1] * a.entry[2][2] * a.entry[3][0] - a.entry[1][2] * a.entry[2][0] * a.entry[3][1]) / dmt;
+		tmp.entry[3][1] = (a.entry[0][0] * a.entry[2][1] * a.entry[3][2] + a.entry[0][1] * a.entry[2][2] * a.entry[3][0] + a.entry[0][2] * a.entry[2][0] * a.entry[3][1] -
+						   a.entry[0][2] * a.entry[2][1] * a.entry[3][0] - a.entry[0][1] * a.entry[2][0] * a.entry[3][2] - a.entry[0][0] * a.entry[2][2] * a.entry[3][1]) / dmt;
+		tmp.entry[3][2] = (a.entry[0][2] * a.entry[1][1] * a.entry[3][0] + a.entry[0][1] * a.entry[1][0] * a.entry[3][2] + a.entry[0][0] * a.entry[1][2] * a.entry[2][1] -
+						   a.entry[0][0] * a.entry[1][1] * a.entry[3][2] - a.entry[0][1] * a.entry[1][2] * a.entry[3][0] - a.entry[0][2] * a.entry[1][0] * a.entry[3][1]) / dmt;
+		tmp.entry[3][3] = (a.entry[0][0] * a.entry[1][1] * a.entry[2][2] + a.entry[0][1] * a.entry[1][2] * a.entry[2][0] + a.entry[0][2] * a.entry[1][0] * a.entry[2][1] -
+						   a.entry[0][2] * a.entry[1][1] * a.entry[2][0] - a.entry[0][1] * a.entry[1][0] * a.entry[2][2] - a.entry[0][0] * a.entry[1][2] * a.entry[2][1]) / dmt;
+	}
+	return tmp;
+}
