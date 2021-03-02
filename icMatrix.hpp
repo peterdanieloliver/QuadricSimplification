@@ -1372,12 +1372,12 @@ inline icMatrix4x4 inverse(const icMatrix4x4& a)
 
 		tmp.entry[1][0] = (a.entry[1][3] * a.entry[2][2] * a.entry[3][0] + a.entry[1][2] * a.entry[2][0] * a.entry[3][3] + a.entry[1][0] * a.entry[2][3] * a.entry[3][2] -
 						   a.entry[1][0] * a.entry[2][2] * a.entry[3][3] - a.entry[1][2] * a.entry[2][3] * a.entry[3][0] - a.entry[1][3] * a.entry[2][0] * a.entry[3][2]) / dmt;
-		tmp.entry[1][1] = (a.entry[0][0] * a.entry[2][2] * a.entry[3][3] + a.entry[0][2] * a.entry[2][3] * a.entry[3][0] + a.entry[0][3] * a.entry[2][3] * a.entry[3][2] -
+		tmp.entry[1][1] = (a.entry[0][0] * a.entry[2][2] * a.entry[3][3] + a.entry[0][2] * a.entry[2][3] * a.entry[3][0] + a.entry[0][3] * a.entry[2][0] * a.entry[3][2] -
 						   a.entry[0][3] * a.entry[2][2] * a.entry[3][0] - a.entry[0][2] * a.entry[2][0] * a.entry[3][3] - a.entry[0][0] * a.entry[2][3] * a.entry[3][2]) / dmt;
 		tmp.entry[1][2] = (a.entry[0][3] * a.entry[1][2] * a.entry[3][0] + a.entry[0][2] * a.entry[1][0] * a.entry[3][3] + a.entry[0][0] * a.entry[1][3] * a.entry[3][2] -
 						   a.entry[0][0] * a.entry[1][2] * a.entry[3][3] - a.entry[0][2] * a.entry[1][3] * a.entry[3][0] - a.entry[0][3] * a.entry[1][0] * a.entry[3][2]) / dmt;
 		tmp.entry[1][3] = (a.entry[0][0] * a.entry[1][2] * a.entry[2][3] + a.entry[0][2] * a.entry[1][3] * a.entry[2][0] + a.entry[0][3] * a.entry[1][0] * a.entry[2][2] -
-						   a.entry[0][1] * a.entry[2][2] * a.entry[3][3] - a.entry[0][2] * a.entry[2][3] * a.entry[3][1] - a.entry[0][3] * a.entry[2][1] * a.entry[3][2]) / dmt;
+						   a.entry[0][3] * a.entry[1][2] * a.entry[2][0] - a.entry[0][2] * a.entry[1][0] * a.entry[2][3] - a.entry[0][0] * a.entry[1][3] * a.entry[2][2]) / dmt;
 
 		tmp.entry[2][0] = (a.entry[1][0] * a.entry[2][1] * a.entry[3][3] + a.entry[1][1] * a.entry[2][3] * a.entry[3][0] + a.entry[1][3] * a.entry[2][0] * a.entry[3][1] -
 						   a.entry[1][3] * a.entry[2][1] * a.entry[3][0] - a.entry[1][1] * a.entry[2][0] * a.entry[3][3] - a.entry[1][0] * a.entry[3][2] * a.entry[3][1]) / dmt;
@@ -1392,7 +1392,7 @@ inline icMatrix4x4 inverse(const icMatrix4x4& a)
 						   a.entry[1][0] * a.entry[2][1] * a.entry[3][2] - a.entry[1][1] * a.entry[2][2] * a.entry[3][0] - a.entry[1][2] * a.entry[2][0] * a.entry[3][1]) / dmt;
 		tmp.entry[3][1] = (a.entry[0][0] * a.entry[2][1] * a.entry[3][2] + a.entry[0][1] * a.entry[2][2] * a.entry[3][0] + a.entry[0][2] * a.entry[2][0] * a.entry[3][1] -
 						   a.entry[0][2] * a.entry[2][1] * a.entry[3][0] - a.entry[0][1] * a.entry[2][0] * a.entry[3][2] - a.entry[0][0] * a.entry[2][2] * a.entry[3][1]) / dmt;
-		tmp.entry[3][2] = (a.entry[0][2] * a.entry[1][1] * a.entry[3][0] + a.entry[0][1] * a.entry[1][0] * a.entry[3][2] + a.entry[0][0] * a.entry[1][2] * a.entry[2][1] -
+		tmp.entry[3][2] = (a.entry[0][2] * a.entry[1][1] * a.entry[3][0] + a.entry[0][1] * a.entry[1][0] * a.entry[3][2] + a.entry[0][0] * a.entry[1][2] * a.entry[3][1] -
 						   a.entry[0][0] * a.entry[1][1] * a.entry[3][2] - a.entry[0][1] * a.entry[1][2] * a.entry[3][0] - a.entry[0][2] * a.entry[1][0] * a.entry[3][1]) / dmt;
 		tmp.entry[3][3] = (a.entry[0][0] * a.entry[1][1] * a.entry[2][2] + a.entry[0][1] * a.entry[1][2] * a.entry[2][0] + a.entry[0][2] * a.entry[1][0] * a.entry[2][1] -
 						   a.entry[0][2] * a.entry[1][1] * a.entry[2][0] - a.entry[0][1] * a.entry[1][0] * a.entry[2][2] - a.entry[0][0] * a.entry[1][2] * a.entry[2][1]) / dmt;

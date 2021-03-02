@@ -1,5 +1,6 @@
 #pragma once
 #include "icVector.hpp"
+#include "icMatrix.hpp"
 #include <vector>
 
 // forward declarations
