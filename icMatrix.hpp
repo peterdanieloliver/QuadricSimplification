@@ -821,6 +821,8 @@ inline double determinant(const icMatrix4x4& a);
 inline icMatrix4x4 transpose(const icMatrix4x4& a);
 inline icMatrix4x4   inverse(const icMatrix4x4& a);
 
+inline icMatrix4x4 square(const icVector4& a);
+
 inline icMatrix4x4::icMatrix4x4() 
 {
 	entry[0][0] = 1;
@@ -1397,5 +1399,15 @@ inline icMatrix4x4 inverse(const icMatrix4x4& a)
 		tmp.entry[3][3] = (a.entry[0][0] * a.entry[1][1] * a.entry[2][2] + a.entry[0][1] * a.entry[1][2] * a.entry[2][0] + a.entry[0][2] * a.entry[1][0] * a.entry[2][1] -
 						   a.entry[0][2] * a.entry[1][1] * a.entry[2][0] - a.entry[0][1] * a.entry[1][0] * a.entry[2][2] - a.entry[0][0] * a.entry[1][2] * a.entry[2][1]) / dmt;
 	}
+	return tmp;
+}
+
+inline icMatrix4x4 square(const icVector4& a)
+{
+	icMatrix4x4 tmp;
+	tmp.set((a.x * a.x), (a.x * a.y), (a.x * a.z), (a.x * a.w),
+			(a.y * a.x), (a.y * a.y), (a.y * a.z), (a.y * a.w),
+			(a.z * a.x), (a.z * a.y), (a.z * a.z), (a.z * a.w),
+			(a.w * a.x), (a.w * a.y), (a.w * a.z), (a.w * a.w));
 	return tmp;
 }

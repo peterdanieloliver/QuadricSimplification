@@ -11,7 +11,7 @@ class Corner;
 // classes
 class Vertex
 {
-// fields
+	// fields
 public:
 
 	int index;
@@ -20,24 +20,26 @@ public:
 
 	int nfaces;
 	int pcount;
-	Face **faces;
+	Face** faces;
 
 	int nedges;
 	int ecount;
-	Edge **edges;
-	double * eweights;
+	Edge** edges;
+	double* eweights;
 
 	// number of corners is the same as number of faces
 	int ccount;
-	Corner **corners;
+	Corner** corners;
 	double total_angle;
 
 	icVector3 normal;
 	int forward;
 
+	icMatrix4x4 error_quad;
+
 	void* other_props;
 
-// methods
+	// methods
 public:
 
 	Vertex(double xx, double yy, double zz)
@@ -50,6 +52,17 @@ public:
 	icVector3 pos()
 	{
 		return icVector3(x, y, z);
+	}
+
+	icVector4 pos4()
+	{
+		return icVector4(x, y, z, 1);
+	}
+
+	// computes geometric error of the current vertex position
+	double error()
+	{
+		return dot((this->pos4() * this->error_quad),this->pos4());
 	}
 };
 
@@ -147,6 +160,7 @@ public:
 	Corner* corners[3];
 
 	icVector3 normal;
+	icVector4 plane;
 	
 	icVector3 center;
 	double area;
@@ -177,3 +191,75 @@ public:
 };
 
 typedef std::vector<LineSegment> PolyLine;
+
+class PairContract
+{
+public:
+	
+	Vertex* v1;
+	Vertex* v2;
+
+	icMatrix4x4 error_quad;
+	icVector4 target;
+	double error;
+
+public:
+
+	PairContract(Vertex* vert1, Vertex* vert2)
+	{
+		// set up field variables
+		v1 = vert1;
+		v2 = vert2;
+		error_quad = v1->error_quad + v2->error_quad;
+
+		// compute optimum contraction target
+		icVector4 tvect(0.0, 0.0, 0.0, 1.0);
+		icMatrix4x4 temp(error_quad);
+		temp.entry[3][0] = 0;
+		temp.entry[3][1] = 0;
+		temp.entry[3][2] = 0;
+		temp.entry[3][3] = 1;
+
+		if (determinant(temp) != 0.0)
+		{
+			target = inverse(temp) * tvect;
+		}
+		else
+		{
+			// if the matrix is not invertible, choose between midpoint and endpoints
+			icVector4 end1(v1->x, v1->y, v1->z, 1);
+			icVector4 end2(v2->x, v2->y, v2->z, 1);
+			icVector4 mid((v1->x + v2->x) / 2, (v1->y + v2->y) / 2, (v1->z + v2->z) / 2, 1);
+
+			double err1 = dot((end1 * error_quad), end1);
+			double err2 = dot((end2 * error_quad), end2);
+			double emid = dot((mid * error_quad), mid);
+			
+			if (err1 < err2 && err1 < emid)
+			{
+				target = end1;
+			}
+			else if (err2 < err1 && err2 < emid)
+			{
+				target = end2;
+			}
+			else
+			{
+				target = mid;
+			}
+		}
+
+		error = dot((target * error_quad), target);
+	}
+};
+
+// inequality operator overloads for priority queue use
+bool operator<(const PairContract& pc1, const PairContract& pc2)
+{
+	return pc1.error < pc2.error;
+}
+
+bool operator>(const PairContract& pc1, const PairContract& pc2)
+{
+	return pc1.error > pc2.error;
+}

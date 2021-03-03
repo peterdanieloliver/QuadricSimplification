@@ -587,6 +587,7 @@ public:
 			double x;
 			double y;
 			double z;
+			double w;
 		};
 	};
 };
@@ -634,6 +635,14 @@ inline icVector4::icVector4(const double* a)
 	entry[1] = a[1];
 	entry[2] = a[2];
 	entry[2] = a[3];
+}
+
+inline icVector4::icVector4(double d0, double d1, double d2, double d3)
+{
+	entry[0] = d0;
+	entry[1] = d1;
+	entry[2] = d2;
+	entry[3] = d3;
 }
 
 //-------------------------------------------------------------------

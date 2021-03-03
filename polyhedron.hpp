@@ -514,6 +514,7 @@ private:
 		icVector3 v0, v1, v2;
 		icVector3 poly_center = center;
 		Face* face;
+		Vertex* vert;
 		double signed_volume = 0.0;
 
 		area = 0.0; // zero out mesh area
@@ -551,14 +552,17 @@ private:
 		}
 
 		// get vertex normals by averaging face normals
+		// and compute vertex error quadrics
 		for (int i = 0; i < nverts; i++)
 		{
-			vlist[i]->normal = icVector3(0.0);
-			for (int j = 0; j < vlist[i]->nfaces; j++)
+			vert = vlist[i];
+			vert->normal.set(0.0);
+			for (int j = 0; j < vert->nfaces; j++)
 			{
-				vlist[i]->normal += vlist[i]->faces[j]->normal;
+				face = vert->faces[j];
+				vert->normal += face->normal;
 			}
-			normalize(vlist[i]->normal);
+			normalize(vert->normal);
 		}
 	}
 
@@ -584,6 +588,42 @@ private:
 		center /= (double)face->nverts;
 		face->center = center;
 	}
+
+	//////////////////////////////////////////////////////////
+	// Functions for quadric error simplification
+	//////////////////////////////////////////////////////////
+
+	// calculate the error quadric for each vertex. Only call 
+	// this once during mesh initialization
+	void calc_error_quadrics()
+	{
+		Face* face;
+		Vertex* vert;
+		icVector4 plane;
+
+		for (int i = 0; i < nverts; i++)
+		{
+			vert = vlist[i];
+			for (int j = 0; j < vert->nfaces; j++)
+			{
+				face = vert->faces[j];
+				plane.set
+				(
+					face->normal.x,
+					face->normal.y,
+					face->normal.z,
+					-(	(face->normal.x * face->verts[0]->x) +
+						(face->normal.y * face->verts[0]->y) + 
+						(face->normal.z * face->verts[0]->z) )
+				);
+
+				vert->error_quad += square(plane);
+			}
+		}
+	}
+
+	// YOU ARE HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// find all eligable pair contractions and put them in a priority queue
 
 	//////////////////////////////////////////////////////////
 	// For printing information about the mesh
