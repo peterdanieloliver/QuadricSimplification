@@ -7,8 +7,13 @@
 class Face;
 class Edge;
 class Corner;
+class PairContraction;
+class PairCompare;
 
-// classes
+//////////////////////////////////////////////////////////
+// Contraction Classes
+//////////////////////////////////////////////////////////
+
 class Vertex
 {
 	// fields
@@ -36,6 +41,7 @@ public:
 	int forward;
 
 	icMatrix4x4 error_quad;
+	std::vector<PairContraction*> pairs;
 
 	void* other_props;
 
@@ -52,6 +58,13 @@ public:
 	icVector3 pos()
 	{
 		return icVector3(x, y, z);
+	}
+
+	void set_pos(double xx, double yy, double zz)
+	{
+		x = xx;
+		y = yy;
+		z = zz;
 	}
 
 	icVector4 pos4()
@@ -172,32 +185,17 @@ public:
 	}
 };
 
-class LineSegment
+//////////////////////////////////////////////////////////
+// Contraction Classes
+//////////////////////////////////////////////////////////
+
+class PairContraction
 {
 public:
-	LineSegment(icVector3 s, icVector3 e) {
-		start = s;
-		end = e;
-		len = length(end - start);
-	};
-	LineSegment(double sx, double sy, double sz, double ex, double ey, double ez) {
-		start = icVector3(sx, sy, sz);
-		end = icVector3(ex, ey, ez);
-		len = length(end - start);
-	};
 
-	icVector3 start, end;  // all in local coordinate systems
-	double len;
-};
-
-typedef std::vector<LineSegment> PolyLine;
-
-class PairContract
-{
-public:
-	
 	Vertex* v1;
 	Vertex* v2;
+	Edge* edge;
 
 	icMatrix4x4 error_quad;
 	icVector4 target;
@@ -205,11 +203,12 @@ public:
 
 public:
 
-	PairContract(Vertex* vert1, Vertex* vert2)
+	PairContraction(Vertex* vert1, Vertex* vert2, Edge* edge_in)
 	{
 		// set up field variables
 		v1 = vert1;
 		v2 = vert2;
+		edge = edge_in;
 		error_quad = v1->error_quad + v2->error_quad;
 
 		// compute optimum contraction target
@@ -234,7 +233,7 @@ public:
 			double err1 = dot((end1 * error_quad), end1);
 			double err2 = dot((end2 * error_quad), end2);
 			double emid = dot((mid * error_quad), mid);
-			
+
 			if (err1 < err2 && err1 < emid)
 			{
 				target = end1;
@@ -253,13 +252,35 @@ public:
 	}
 };
 
-// inequality operator overloads for priority queue use
-bool operator<(const PairContract& pc1, const PairContract& pc2)
+class PairCompare
 {
-	return pc1.error < pc2.error;
-}
+public:
+	int operator() (const PairContraction* p1, const PairContraction* p2)
+	{
+		return (p1->error > p2->error);
+	}
+};
 
-bool operator>(const PairContract& pc1, const PairContract& pc2)
+//////////////////////////////////////////////////////////
+// Drawing utility classes
+//////////////////////////////////////////////////////////
+
+class LineSegment
 {
-	return pc1.error > pc2.error;
-}
+public:
+	LineSegment(icVector3 s, icVector3 e) {
+		start = s;
+		end = e;
+		len = length(end - start);
+	};
+	LineSegment(double sx, double sy, double sz, double ex, double ey, double ez) {
+		start = icVector3(sx, sy, sz);
+		end = icVector3(ex, ey, ez);
+		len = length(end - start);
+	};
+
+	icVector3 start, end;  // all in local coordinate systems
+	double len;
+};
+
+typedef std::vector<LineSegment> PolyLine;

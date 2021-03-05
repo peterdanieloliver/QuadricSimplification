@@ -10,6 +10,7 @@
 #include "icVector.hpp"
 #include <iostream>
 #include <vector>
+#include <queue>
 
 #define WEIGHT_UNIF			1
 #define WEIGHT_CORD			2
@@ -50,16 +51,11 @@ public:
 	double area;
 	unsigned char orientation; // 0 for ccw, 1 for cw
 
-	// curvature variables
-	double gmean, gstdev;
-	double mmean, mstdev;
-
 	PlyOtherProp* vert_other;
 	PlyOtherProp* face_other;
 
-	std::vector<LineSegment*> silhouette;
-	std::vector<LineSegment*> major_streamlines;
-	std::vector<LineSegment*> minor_streamlines;
+	// contraction containers
+	std::priority_queue<PairContraction*, std::vector<PairContraction*>, PairCompare> pair_queue;
 
 // private helper functions
 private:
@@ -536,6 +532,7 @@ private:
 
 			signed_volume += dot(poly_center - v0, face->normal) * face->area;
 		}
+
 		// determine face orientations
 		signed_volume /= area;
 		if (signed_volume < 0)
@@ -552,7 +549,6 @@ private:
 		}
 
 		// get vertex normals by averaging face normals
-		// and compute vertex error quadrics
 		for (int i = 0; i < nverts; i++)
 		{
 			vert = vlist[i];
@@ -622,8 +618,113 @@ private:
 		}
 	}
 
-	// YOU ARE HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// find all eligable pair contractions and put them in a priority queue
+	// find all eligable pair contractions and put them in a min heap
+	void find_valid_pairs(double threshold)
+	{
+		Vertex* vert;
+		Vertex* oppo;
+		Edge* edge;
+		icVector3 temp;
+		Edge* pair_edge = nullptr;
+		PairContraction* contraction;
+
+		// search through all vertex pairs
+		for (int i = 0; i < nverts; i++)
+		{
+			vert = vlist[i];
+			for (int j = (i+1); j < nverts; j++)
+			{
+				oppo = vlist[j];
+				
+				// check to see if it is an edge
+				for (int k = 0; k < vert->nedges; k++)
+				{
+					edge = vert->edges[k];
+					if (edge->getOtherVert(vert) == oppo)
+					{
+						pair_edge = edge;
+						break;
+					}
+				}
+				
+				// check the distance between points
+				temp = (oppo->pos() - vert->pos());
+				if ((length(temp) < threshold) || (pair_edge != nullptr))
+				{
+					// create contraction and insert into priority queue
+					contraction = new PairContraction(vert, oppo, pair_edge);
+					pair_queue.push(contraction);
+					vert->pairs.push_back(contraction);
+					oppo->pairs.push_back(contraction);
+				}
+			}
+		}
+	}
+
+	// contract a vertex pair and update mesh
+	void contract_pair(PairContraction* pair)
+	{
+		// move both vertices to the new target position
+		pair->v1->set_pos(pair->target.x, pair->target.y, pair->target.z);
+		pair->v2->set_pos(pair->target.x, pair->target.y, pair->target.z);
+
+		// if pair is an edge, delete degenerate faces and edge and update pointers
+		if (pair->edge != nullptr)
+		{
+			Face* face;
+			Face* face_update;
+			Edge* edge;
+			Edge* edge_update;
+			Corner* corn;
+			Corner* oppv1;
+			Corner* oppv2;
+			int fupdate_index, eupdate_index;
+			for (int i = 0; i < 2; i++)
+			{
+				face = pair->edge->faces[i];
+				for (int j = 0; j < 3; j++)
+				{
+					corn = face->corners[j];
+					if (corn->vert == pair->v1) { oppv1 = corn->oppo; }
+					if (corn->vert == pair->v2) { oppv2 = corn->oppo; }
+					delete(corn);
+				}
+				for (int j = 0; j < 3; j++)
+				{
+					edge = face->edges[j];
+					if (edge == pair->edge)
+					{
+						continue;
+					}
+					else if ((edge->verts[0] == pair->v1) || (edge->verts[1] == pair->v1))
+					{
+						edge_update = edge;
+						if (edge_update->faces[0] == face) { eupdate_index = 0; }
+						else { eupdate_index = 1; }
+					}
+					else if ((edge->verts[0] == pair->v2) || (edge->verts[1] == pair->v2))
+					{
+						face_update = edge->getOtherFace(face);
+						if (face_update->edges[0] == edge) { fupdate_index = 0; }
+						else if (face_update->edges[1] == edge) { fupdate_index = 1; }
+						else { eupdate_index = 2; }
+						delete(edge);
+					}
+				}
+				edge_update->faces[fupdate_index] = face_update;
+				face_update->edges[eupdate_index] = edge_update;
+				oppv1->edge = edge_update;
+				oppv1->oppo = oppv2;
+				oppv2->oppo = oppv1;
+			}
+
+			// delete contraction edge
+			delete(pair->edge);
+		}
+
+		// YOU ARE HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// transfer all elements attached to v2 to v1 and delete v2
+	}
 
 	//////////////////////////////////////////////////////////
 	// For printing information about the mesh
