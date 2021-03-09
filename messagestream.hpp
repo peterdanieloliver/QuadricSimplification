@@ -70,3 +70,9 @@ protected:
 	}
 
 };
+
+void printLine(std::string line, bool new_section = false)
+{
+	if (new_section) { std::cout << std::endl; }
+	std::cout << line.c_str() << std::endl;
+}

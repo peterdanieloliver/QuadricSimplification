@@ -7,6 +7,7 @@
 #include <qstring.h>
 #include <iostream>
 #include "dialogs.hpp"
+#include "messagestream.hpp"
 
 class MainWindow : public QMainWindow
 {
@@ -81,6 +82,11 @@ public:
 		meshSmooth->setText(tr("Smooth"));
 		meshMenu->addAction(meshSmooth);
 		connect(meshSmooth, &QAction::triggered, this, &MainWindow::onMeshSmooth);
+
+		QAction* meshPairSimp = new QAction(meshMenu);
+		meshPairSimp->setText(tr("Pair Simplify"));
+		meshMenu->addAction(meshPairSimp);
+		connect(meshPairSimp, &QAction::triggered, this, &MainWindow::onMeshPairSimp);
 
 		setMenuBar(menuBar);
 	}
@@ -188,6 +194,36 @@ private slots:
 			// smoothing finished message
 			message = QString("\tMesh smoothing complete, %1ms elapsed").arg(QString::number(time_elapsed));
 			std::cout << message.toStdString().c_str() << std::endl;
+		}
+	}
+
+	void onMeshPairSimp()
+	{
+		PairSimpDialog pairDialog(this);
+		pairDialog.setModal(true);
+		int result = pairDialog.exec();
+		if (result == QDialog::Accepted)
+		{
+			// grab values from dialog
+			int faceTarget = pairDialog.targetSelector->value();
+			double errorTolerance = pairDialog.toleranceSelector->value();
+			int maxContractions = pairDialog.maxSelector->value();
+
+			// Simplification initiated message
+			QString message = QString("Initiated pair contraction mesh simplification with %1 target face count, %2 geometric error tolerance, %3 max contractions:")
+				.arg(QString::number(faceTarget), QString::number(errorTolerance), QString::number(maxContractions));
+			printLine(message.toStdString(),true);
+
+			// execute simplification and time execution
+			QTime timer;
+			timer.start();
+			window->getGLWidget()->getScene()->mesh->pairSimplify(faceTarget, errorTolerance, maxContractions);
+			window->getGLWidget()->getScene()->setNeedsUpdate();
+			int time_elapsed = timer.elapsed();
+
+			// Simplification finished message
+			message = QString("\tPair contraction simplification complete, %1 elapsed").arg(QString::number(time_elapsed));
+			printLine(message.toStdString());
 		}
 	}
 

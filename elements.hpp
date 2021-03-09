@@ -334,3 +334,13 @@ public:
 };
 
 typedef std::vector<LineSegment> PolyLine;
+
+class Testy
+{
+public:
+	int index;
+	Testy(int i)
+	{
+		index = i;
+	}
+};

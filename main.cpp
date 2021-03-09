@@ -13,6 +13,20 @@ Window* window;
 
 int main(int argc, char *argv[])
 {
+    //Testy** tlist = new Testy * [7];
+    //for (int i = 0; i < 7; i++)
+    //{
+    //    tlist[i] = new Testy(i);
+    //}
+
+    //tlist[0] = nullptr;
+
+    //Testy* ttemp;
+    //for (int i = 0; i < 7; i++)
+    //{
+    //    ttemp = tlist[i];
+    //}
+    
     QApplication a(argc, argv);
     mainWindow = new MainWindow;
     window = new Window(mainWindow);
