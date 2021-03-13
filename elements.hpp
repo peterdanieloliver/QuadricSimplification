@@ -2,6 +2,7 @@
 #include "icVector.hpp"
 #include "icMatrix.hpp"
 #include <vector>
+#include <unordered_set>
 
 // forward declarations
 class Face;
@@ -41,7 +42,7 @@ public:
 	int forward;
 
 	icMatrix4x4 error_quad;
-	std::vector<PairContraction*> pairs;
+	std::unordered_set<PairContraction*> pairs;
 
 	void* other_props;
 
@@ -195,7 +196,6 @@ public:
 
 	Vertex* v1;
 	Vertex* v2;
-	Edge* edge = nullptr;
 
 	icMatrix4x4 error_quad;
 	icVector4 target;
@@ -204,56 +204,20 @@ public:
 
 public:
 
-	PairContraction(Vertex* vert1, Vertex* vert2, Edge* edge_in)
+	PairContraction(Vertex* vert1, Vertex* vert2)
 	{
 		// set up field variables
 		v1 = vert1;
 		v2 = vert2;
-		edge = edge_in;
-		error_quad = v1->error_quad + v2->error_quad;
-
-		// compute optimum contraction target
-		icVector4 tvect(0.0, 0.0, 0.0, 1.0);
-		icMatrix4x4 temp(error_quad);
-		temp.entry[3][0] = 0;
-		temp.entry[3][1] = 0;
-		temp.entry[3][2] = 0;
-		temp.entry[3][3] = 1;
-
-		if (determinant(temp) != 0.0)
-		{
-			target = inverse(temp) * tvect;
-		}
-		else
-		{
-			// if the matrix is not invertible, choose between midpoint and endpoints
-			icVector4 end1(v1->x, v1->y, v1->z, 1);
-			icVector4 end2(v2->x, v2->y, v2->z, 1);
-			icVector4 mid((v1->x + v2->x) / 2, (v1->y + v2->y) / 2, (v1->z + v2->z) / 2, 1);
-
-			double err1 = dot((end1 * error_quad), end1);
-			double err2 = dot((end2 * error_quad), end2);
-			double emid = dot((mid * error_quad), mid);
-
-			if (err1 < err2 && err1 < emid)
-			{
-				target = end1;
-			}
-			else if (err2 < err1 && err2 < emid)
-			{
-				target = end2;
-			}
-			else
-			{
-				target = mid;
-			}
-		}
-
-		error = dot((target * error_quad), target);
+		
+		// find contraction target and compute error
+		computeError();
 	}
 
-	void updateError()
+	void computeError()
 	{
+		error_quad = v1->error_quad + v2->error_quad;
+
 		// compute optimum contraction target
 		icVector4 tvect(0.0, 0.0, 0.0, 1.0);
 		icMatrix4x4 temp(error_quad);
@@ -300,14 +264,25 @@ public:
 		else if (vert == v2) { return v1; }
 		else { return nullptr; }
 	}
+
+	bool same_verts(PairContraction* that)
+	{
+		return (((this->v1 == that->v1) && (this->v2 == that->v2)) ||
+				((this->v1 == that->v2) && (this->v2 == that->v1)));
+	}
 };
+
+bool pairCompare(const PairContraction* p1, const PairContraction* p2)
+{
+	return (p1->error > p2->error);
+}
 
 class PairCompare
 {
 public:
-	int operator() (const PairContraction* p1, const PairContraction* p2)
+	int operator() (const PairContraction* p1, const PairContraction* p2) const
 	{
-		return (p1->error > p2->error);
+		return (p1->error < p2->error);
 	}
 };
 

@@ -8,9 +8,10 @@
 #include "ply_io.h"
 #include "elements.hpp"
 #include "icVector.hpp"
+#include "messagestream.hpp"
 #include <iostream>
 #include <vector>
-#include <queue>
+#include <set>
 
 #define WEIGHT_UNIF			1
 #define WEIGHT_CORD			2
@@ -55,7 +56,9 @@ public:
 	PlyOtherProp* face_other;
 
 	// contraction containers
-	std::priority_queue<PairContraction*, std::vector<PairContraction*>, PairCompare> pair_queue;
+	std::set<PairContraction*, PairCompare> cont_pairs;
+	//std::priority_queue<PairContraction*, std::vector<PairContraction*>, PairCompare> pair_queue;
+	//std::vector<PairContraction*> pair_heap;
 
 // private helper functions
 private:
@@ -626,19 +629,17 @@ private:
 		Vertex* oppo;
 		Edge* edge;
 		icVector3 temp;
-		Edge* pair_edge = nullptr;
+		bool is_edge;
 		PairContraction* contraction;
 
 		// search through all vertex pairs
 		for (int i = 0; i < nverts; i++)
 		{
 			vert = vlist[i];
-			
-
 			for (int j = (i+1); j < nverts; j++)
 			{
 				oppo = vlist[j];
-				pair_edge = nullptr;
+				is_edge = false;
 
 				// check to see if it is an edge
 				for (int k = 0; k < vert->nedges; k++)
@@ -646,412 +647,542 @@ private:
 					edge = vert->edges[k];
 					if (edge->getOtherVert(vert) == oppo)
 					{
-						pair_edge = edge;
+						is_edge = true;
 						break;
 					}
 				}
 				
 				// check the distance between points
 				temp = (oppo->pos() - vert->pos());
-				if ((length(temp) < threshold) || (pair_edge != nullptr))
+				if ((length(temp) < threshold) || is_edge)
 				{
 					// create contraction and insert into priority queue
-					contraction = new PairContraction(vert, oppo, pair_edge);
-					pair_queue.push(contraction);
-					vert->pairs.push_back(contraction);
-					oppo->pairs.push_back(contraction);
+					contraction = new PairContraction(vert, oppo);
+					cont_pairs.insert(contraction);
+					vert->pairs.insert(contraction);
+					oppo->pairs.insert(contraction);
 				}
 			}
 		}
 	}
 
-	// contract a vertex pair and update mesh
 	void contract_pair(PairContraction* pair)
 	{
+		// add error quadrics
+		pair->v1->error_quad += pair->v2->error_quad;
+
 		// move both vertices to the new target position
 		pair->v1->set_pos(pair->target.x, pair->target.y, pair->target.z);
 		pair->v2->set_pos(pair->target.x, pair->target.y, pair->target.z);
 
-		// if pair is an edge, delete degenerate faces and edge and update pointers
-		if (pair->edge != nullptr)
+		// initialize a new array for the face pointers in v1
+		Face** ftemp = new Face * [pair->v1->nfaces + pair->v2->nfaces];
+		int fcount = 0;
+
+		// move all faces in v1 to ftemp
+		Face* face;
+		for (int i = 0; i < pair->v1->nfaces; i++)
 		{
-			Face* face;
-			Face* face_update;
-			Edge* edge;
-			Edge* edge_update;
-			Corner* corn;
-			Corner* oppv1;
-			Corner* oppv2;
-			Vertex* vert;
+			face = pair->v1->faces[i];
+			ftemp[fcount] = face;
+			fcount++;
+		}
 
-			if (pair->edge->index == 2641)
+		// replace all references to v2 in faces with references to v1 and move faces to ftemp
+		for (int i = 0; i < pair->v2->nfaces; i++)
+		{
+			face = pair->v2->faces[i];
+			for (int j = 0; j < 3; j++)
 			{
-				int test = 0;
-				face = pair->edge->faces[0];
-				face = pair->edge->faces[1];
-				corn = pair->edge->corners[0];
-				corn = pair->edge->corners[1];
+				if (face->verts[j] == pair->v2)
+				{
+					face->verts[j] = pair->v1;
+				}
 			}
-			// remove degenerate faces
-			for (int i = 0; i < pair->edge->nfaces; i++)
+
+			ftemp[fcount] = face;
+			fcount++;
+		}
+
+		// set v1 face list to ftemp
+		delete[](pair->v1->faces);
+		pair->v1->faces = ftemp;
+		pair->v1->nfaces = fcount;
+
+		// check for degenerate faces in v1 face list
+		for (int i = 0; i < pair->v1->nfaces; i++)
+		{
+			face = pair->v1->faces[i];
+			if (face->verts[0] == face->verts[1] ||
+				face->verts[1] == face->verts[2] ||
+				face->verts[2] == face->verts[0])
 			{
-				face = pair->edge->faces[i];
-				// remove degenerate corners
-				for (int j = 0; j < 3; j++)
-				{
-					corn = face->corners[j];
-					if (corn->vert == pair->v1)
-					{ 
-						oppv1 = corn->oppo;
-					}
-					if (corn->vert == pair->v2)
-					{
-						oppv2 = corn->oppo;
-					}
-					// remove all references to corner and delete
-					remove_corner(corn);
-				}
-				for (int j = 0; j < 3; j++)
-				{
-					vert = face->verts[j];
-				}
-				// remove degenerate edges
-				for (int j = 0; j < 3; j++)
-				{
-					edge = face->edges[j];
-					if (edge == pair->edge)
-					{
-						continue;
-					}
-					else if ((edge->verts[0] == pair->v1) || (edge->verts[1] == pair->v1))
-					{
-						edge_update = edge;
-					}
-					else if ((edge->verts[0] == pair->v2) || (edge->verts[1] == pair->v2))
-					{
-						face_update = edge->getOtherFace(face);
-						remove_edge(edge);
-					}
-				}
-
-				// remove all references to pair edge and delete
-				if (i == (pair->edge->nfaces - 1))
-				{
-					remove_edge(pair->edge);
-				}
-				
-				// remove all references to face and delete
 				remove_face(face);
-
-				// update pointers
-				oppv1->edge = edge_update;
-				oppv1->oppo = oppv2;
-				oppv2->oppo = oppv1;
-				for (int j = 0; j < edge_update->nfaces; j++)
-				{
-					if (edge_update->corners[j] == nullptr)
-					{
-						edge_update->corners[j] = oppv1;
-					}
-				}
-				for (int j = 0; j < edge_update->nfaces; j++)
-				{
-					if (edge_update->faces[j] == nullptr)
-					{
-						edge_update->faces[j] = face_update;
-					}
-				}
-				for (int j = 0; j < 3; j++)
-				{
-					if (face_update->edges[j] == nullptr)
-					{
-						face_update->edges[j] = edge_update;
-					}
-				}
+				i--;
 			}
 		}
 
-		// disallow pair for future contraction and transfer all elements attached to v2 to v1 and delete v2
-		pair->allowed = false;
-		remove_vert(pair->v2, pair->v1);
+		// erase contraction from vertices and global set
+		pair->v1->pairs.erase(pair);
+		pair->v2->pairs.erase(pair);
+		cont_pairs.erase(pair);
+
+		// move all pair contractions from v2 to v1
+		for (PairContraction* contv2 : pair->v2->pairs)
+		{
+			// erase from global set
+			cont_pairs.erase(contv2);
+			
+			// switch v2 references to v1
+			if (contv2->v1 == pair->v2)
+			{
+				contv2->v1 = pair->v1;
+			}
+			else if (contv2->v2 == pair->v2)
+			{
+				contv2->v2 = pair->v1;
+			}
+
+			// find any duplicate pairs and erase them
+			for (PairContraction* contv1 : pair->v1->pairs)
+			{
+				if (contv2->same_verts(contv1))
+				{
+					contv2->v1->pairs.erase(contv2);
+					contv2->v2->pairs.erase(contv2);
+					contv2->allowed = false;
+					break;
+				}
+			}
+
+			// add to v1 pair set if allowed, otherwise delete
+			if (contv2->allowed)
+			{
+				contv2->computeError();
+				pair->v1->pairs.insert(contv2);
+				cont_pairs.insert(contv2);
+			}
+			else
+			{
+				delete(contv2);
+			}
+		}
+
+		// delete v2 and remove from vlist
+		nverts--;
+		vlist[pair->v2->index] = vlist[nverts];
+		vlist[pair->v2->index]->index = pair->v2->index;
+		delete[](pair->v2->corners);
+		delete[](pair->v2->edges);
+		delete[](pair->v2->faces);
+		delete(pair->v2);
+
+		// delete pair contraction
 		delete(pair);
 	}
+
+	// contract a vertex pair and update mesh
+	//void contract_pair(PairContraction* pair)
+	//{
+	//	// move both vertices to the new target position
+	//	pair->v1->set_pos(pair->target.x, pair->target.y, pair->target.z);
+	//	pair->v2->set_pos(pair->target.x, pair->target.y, pair->target.z);
+	//	// if pair is an edge, delete degenerate faces and edge and update pointers
+	//	if (pair->edge != nullptr)
+	//	{
+	//		Face* face;
+	//		Face* face_update;
+	//		Edge* edge;
+	//		Edge* edge_update;
+	//		Corner* corn;
+	//		Corner* oppv1;
+	//		Corner* oppv2;
+	//		Vertex* vert;
+	//		if (pair->edge->index == 2641)
+	//		{
+	//			int test = 0;
+	//			face = pair->edge->faces[0];
+	//			face = pair->edge->faces[1];
+	//			corn = pair->edge->corners[0];
+	//			corn = pair->edge->corners[1];
+	//		}
+	//		// remove degenerate faces
+	//		for (int i = 0; i < pair->edge->nfaces; i++)
+	//		{
+	//			face = pair->edge->faces[i];
+	//			// remove degenerate corners
+	//			for (int j = 0; j < 3; j++)
+	//			{
+	//				corn = face->corners[j];
+	//				if (corn->vert == pair->v1)
+	//				{ 
+	//					oppv1 = corn->oppo;
+	//				}
+	//				if (corn->vert == pair->v2)
+	//				{
+	//					oppv2 = corn->oppo;
+	//				}
+	//				// remove all references to corner and delete
+	//				remove_corner(corn);
+	//			}
+	//			for (int j = 0; j < 3; j++)
+	//			{
+	//				vert = face->verts[j];
+	//			}
+	//			// remove degenerate edges
+	//			for (int j = 0; j < 3; j++)
+	//			{
+	//				edge = face->edges[j];
+	//				if (edge == pair->edge)
+	//				{
+	//					continue;
+	//				}
+	//				else if ((edge->verts[0] == pair->v1) || (edge->verts[1] == pair->v1))
+	//				{
+	//					edge_update = edge;
+	//				}
+	//				else if ((edge->verts[0] == pair->v2) || (edge->verts[1] == pair->v2))
+	//				{
+	//					face_update = edge->getOtherFace(face);
+	//					remove_edge(edge);
+	//				}
+	//			}
+	//			// remove all references to pair edge and delete
+	//			if (i == (pair->edge->nfaces - 1))
+	//			{
+	//				remove_edge(pair->edge);
+	//			}
+	//			
+	//			// remove all references to face and delete
+	//			remove_face(face);
+	//			// update pointers
+	//			oppv1->edge = edge_update;
+	//			oppv1->oppo = oppv2;
+	//			oppv2->oppo = oppv1;
+	//			for (int j = 0; j < edge_update->nfaces; j++)
+	//			{
+	//				if (edge_update->corners[j] == nullptr)
+	//				{
+	//					edge_update->corners[j] = oppv1;
+	//				}
+	//			}
+	//			for (int j = 0; j < edge_update->nfaces; j++)
+	//			{
+	//				if (edge_update->faces[j] == nullptr)
+	//				{
+	//					edge_update->faces[j] = face_update;
+	//				}
+	//			}
+	//			for (int j = 0; j < 3; j++)
+	//			{
+	//				if (face_update->edges[j] == nullptr)
+	//				{
+	//					face_update->edges[j] = edge_update;
+	//				}
+	//			}
+	//		}
+	//	}
+	//	// disallow pair for future contraction and transfer all elements attached to v2 to v1 and delete v2
+	//	pair->allowed = false;
+	//	remove_vert(pair->v2, pair->v1);
+	//	delete(pair);
+	//}
 
 	//////////////////////////////////////////////////////////
 	// Element deletion functions
 	//////////////////////////////////////////////////////////
 
-	void remove_corner(Corner* corn)
-	{
-		// make all references in other elements nullptr
-		if (corn->next != nullptr) { corn->next->prev = nullptr; }
-		if (corn->prev != nullptr) { corn->prev->next = nullptr; }
-		if (corn->oppo != nullptr) { corn->oppo->oppo = nullptr; }
-		if (corn->vert != nullptr)
-		{
-			for (int i = 0; i < (corn->vert->nfaces); i++)
-			{
-				if (corn->vert->corners[i] == corn)
-				{
-					corn->vert->corners[i] = corn->vert->corners[corn->vert->nfaces-1];
-					break;
-				}
-			}
-		}
-		if (corn->edge != nullptr)
-		{
-			for (int i = 0; i < corn->edge->nfaces; i++)
-			{
-				if (corn->edge->corners[i] == corn)
-				{
-					
-					corn->edge->corners[0] = nullptr;
-					break;
-				}
-			}
-		}
-		if (corn->face != nullptr)
-		{
-			for (int i = 0; i < 3; i++)
-			{
-				if (corn->face->corners[i] == corn)
-				{
-					corn->face->corners[i] = nullptr;
-					break;
-				}
-			}
-		}
-		
-		// remove from corner list and delete object
-		ncorners--;
-		clist[corn->index] = clist[ncorners];
-		clist[corn->index]->index = corn->index;
-		delete(corn);
-	}
-
-	void remove_edge(Edge* edge)
-	{
-		// make all references in other elements nullptr
-		for (int i = 0; i < 2; i++)
-		{
-			if (edge->verts[i] != nullptr)
-			{
-				for (int j = 0; j < edge->verts[i]->nedges; j++)
-				{
-					if (edge->verts[i]->edges[j] == edge)
-					{
-						edge->verts[i]->nedges--;
-						edge->verts[i]->edges[j] = edge->verts[i]->edges[edge->verts[i]->nedges];
-						break;
-					}
-				}
-			}
-		}
-		for (int i = 0; i < edge->nfaces; i++)
-		{
-			if (edge->faces[i] != nullptr)
-			{
-				for (int j = 0; j < 3; j++)
-				{
-					if (edge->faces[i]->edges[j] == edge)
-					{
-						edge->faces[i]->edges[j] = nullptr;
-						break;
-					}
-				}
-			}
-		}
-		for (int i = 0; i < edge->nfaces; i++)
-		{
-			if (edge->corners[i] != nullptr)
-			{
-				edge->corners[i]->edge = nullptr;
-			}
-		}
-		for (int i = 0; i < edge->verts[0]->pairs.size(); i++)
-		{
-			if (edge->verts[0]->pairs[i]->edge == edge)
-			{
-				edge->verts[0]->pairs[i]->allowed = false;
-			}
-		}
-		for (int i = 0; i < edge->verts[1]->pairs.size(); i++)
-		{
-			if (edge->verts[1]->pairs[i]->edge == edge)
-			{
-				edge->verts[1]->pairs[i]->allowed = false;
-			}
-		}
-
-		// remove from edge list and delete object
-		nedges--;
-		elist[edge->index] = elist[nedges];
-		elist[edge->index]->index = edge->index;
-		delete(edge);
-	}
-
 	void remove_face(Face* face)
 	{
-		// make all references in other elements nullptr
+		// remove from vertex lists
+		Vertex* vert;
 		for (int i = 0; i < 3; i++)
 		{
-			if (face->verts[i] != nullptr)
+			vert = face->verts[i];
+			for (int j = 0; j < vert->nfaces; j++)
 			{
-				for (int j = 0; j < face->verts[i]->nfaces; j++)
+				if (vert->faces[j] == face)
 				{
-					if (face->verts[i]->faces[j] == face)
-					{
-						face->verts[i]->nfaces--;
-						face->verts[i]->faces[j] = face->verts[i]->faces[face->verts[i]->nfaces];
-						break;
-					}
+					vert->nfaces--;
+					vert->faces[j] = vert->faces[vert->nfaces];
 				}
-			}
-		}
-		for (int i = 0; i < 3; i++)
-		{
-			if (face->edges[i] != nullptr)
-			{
-				for (int j = 0; j < face->edges[i]->nfaces; j++)
-				{
-					if (face->edges[i]->faces[j] == face)
-					{
-						face->edges[i]->faces[j] = nullptr;
-						break;
-					}
-				}
-			}
-		}
-		for (int i = 0; i < 3; i++)
-		{
-			if (face->corners[i] != nullptr)
-			{
-				face->corners[i]->face = nullptr;
 			}
 		}
 
-		// remove from face list and delete object
+		// remove from flist
 		nfaces--;
 		flist[face->index] = flist[nfaces];
 		flist[face->index]->index = face->index;
+
+		// delete face
+		delete[](face->edges);
+		delete[](face->verts);
 		delete(face);
 	}
 
-	void remove_vert(Vertex* vrem, Vertex* vnew)
-	{
-		// initialize new arrays for vertex faces, edges, and corners
-		int ccount, ecount, fcount;
-		ccount = ecount = fcount = 0;
-		Corner** ctemp = new Corner * [vrem->nfaces + vnew->nfaces];
-		Edge** etemp = new Edge * [vrem->nedges + vnew->nedges];
-		Face** ftemp = new Face * [vrem->nfaces + vnew->nfaces];
-		Vertex* vtemp;
+	//void remove_corner(Corner* corn)
+	//{
+	//	// make all references in other elements nullptr
+	//	if (corn->next != nullptr) { corn->next->prev = nullptr; }
+	//	if (corn->prev != nullptr) { corn->prev->next = nullptr; }
+	//	if (corn->oppo != nullptr) { corn->oppo->oppo = nullptr; }
+	//	if (corn->vert != nullptr)
+	//	{
+	//		for (int i = 0; i < (corn->vert->nfaces); i++)
+	//		{
+	//			if (corn->vert->corners[i] == corn)
+	//			{
+	//				corn->vert->corners[i] = corn->vert->corners[corn->vert->nfaces-1];
+	//				break;
+	//			}
+	//		}
+	//	}
+	//	if (corn->edge != nullptr)
+	//	{
+	//		for (int i = 0; i < corn->edge->nfaces; i++)
+	//		{
+	//			if (corn->edge->corners[i] == corn)
+	//			{
+	//				
+	//				corn->edge->corners[0] = nullptr;
+	//				break;
+	//			}
+	//		}
+	//	}
+	//	if (corn->face != nullptr)
+	//	{
+	//		for (int i = 0; i < 3; i++)
+	//		{
+	//			if (corn->face->corners[i] == corn)
+	//			{
+	//				corn->face->corners[i] = nullptr;
+	//				break;
+	//			}
+	//		}
+	//	}
+	//	
+	//	// remove from corner list and delete object
+	//	ncorners--;
+	//	clist[corn->index] = clist[ncorners];
+	//	clist[corn->index]->index = corn->index;
+	//	delete(corn);
+	//}
 
-		// replace all references to vrem with references to vnew
-		for (int i = 0; i < vrem->nfaces; i++)
-		{
-			if (vrem->corners[i] != nullptr)
-			{
-				vrem->corners[i]->vert = vnew;
-				ctemp[ccount] = vrem->corners[i];
-				ccount++;
-			}
-		}
-		for (int i = 0; i < vrem->nedges; i++)
-		{
-			if (vrem->edges[i] != nullptr)
-			{
-				if (vrem->edges[i]->verts[0] == vrem) { vrem->edges[i]->verts[0] = vnew; }
-				if (vrem->edges[i]->verts[1] == vrem) { vrem->edges[i]->verts[1] = vnew; }
-				etemp[ecount] = vrem->edges[i];
-				ecount++;
-			}
-		}
-		for (int i = 0; i < vrem->nfaces; i++)
-		{
-			if (vrem->faces[i] != nullptr)
-			{
-				for (int j = 0; j < 3; j++)
-				{
-					if (vrem->faces[i]->verts[j] == vrem)
-					{
-						vrem->faces[i]->verts[j] = vnew;
-						ftemp[fcount] = vrem->faces[i];
-						fcount++;
-					}
-				}
-			}
-		}
-		for (PairContraction* pair : vrem->pairs)
-		{
-			if (pair->v1 == vrem) { pair->v1 = vnew; }
-			else if (pair->v2 == vrem) { pair->v2 = vnew; }
-			if (pair->allowed)
-			{
-				vnew->pairs.push_back(pair);
-			}
-		}
+	//void remove_edge(Edge* edge)
+	//{
+	//	// make all references in other elements nullptr
+	//	for (int i = 0; i < 2; i++)
+	//	{
+	//		if (edge->verts[i] != nullptr)
+	//		{
+	//			for (int j = 0; j < edge->verts[i]->nedges; j++)
+	//			{
+	//				if (edge->verts[i]->edges[j] == edge)
+	//				{
+	//					edge->verts[i]->nedges--;
+	//					edge->verts[i]->edges[j] = edge->verts[i]->edges[edge->verts[i]->nedges];
+	//					break;
+	//				}
+	//			}
+	//		}
+	//	}
+	//	for (int i = 0; i < edge->nfaces; i++)
+	//	{
+	//		if (edge->faces[i] != nullptr)
+	//		{
+	//			for (int j = 0; j < 3; j++)
+	//			{
+	//				if (edge->faces[i]->edges[j] == edge)
+	//				{
+	//					edge->faces[i]->edges[j] = nullptr;
+	//					break;
+	//				}
+	//			}
+	//		}
+	//	}
+	//	for (int i = 0; i < edge->nfaces; i++)
+	//	{
+	//		if (edge->corners[i] != nullptr)
+	//		{
+	//			edge->corners[i]->edge = nullptr;
+	//		}
+	//	}
+	//	for (int i = 0; i < edge->verts[0]->pairs.size(); i++)
+	//	{
+	//		if (edge->verts[0]->pairs[i]->edge == edge)
+	//		{
+	//			edge->verts[0]->pairs[i]->allowed = false;
+	//		}
+	//	}
+	//	for (int i = 0; i < edge->verts[1]->pairs.size(); i++)
+	//	{
+	//		if (edge->verts[1]->pairs[i]->edge == edge)
+	//		{
+	//			edge->verts[1]->pairs[i]->allowed = false;
+	//		}
+	//	}
+	//	// remove from edge list and delete object
+	//	nedges--;
+	//	elist[edge->index] = elist[nedges];
+	//	elist[edge->index]->index = edge->index;
+	//	delete(edge);
+	//}
 
-		// carry over all references originally from vnew
-		for (int i = 0; i < vnew->nedges; i++)
-		{
-			if (vnew->edges[i] != nullptr)
-			{
-				etemp[ecount] = vnew->edges[i];
-				ecount++;
-			}
-		}
-		for (int i = 0; i < vnew->nfaces; i++)
-		{
-			if (vnew->faces[i] != nullptr)
-			{
-				ftemp[fcount] = vnew->faces[i];
-				fcount++;
-			}
-		}
-		for (int i = 0; i < vnew->nfaces; i++)
-		{
-			if (vnew->corners[i] != nullptr)
-			{
-				ctemp[ccount] = vnew->corners[i];
-				ccount++;
-			}
-		}
+	//void remove_face(Face* face)
+	//{
+	//	// make all references in other elements nullptr
+	//	for (int i = 0; i < 3; i++)
+	//	{
+	//		if (face->verts[i] != nullptr)
+	//		{
+	//			for (int j = 0; j < face->verts[i]->nfaces; j++)
+	//			{
+	//				if (face->verts[i]->faces[j] == face)
+	//				{
+	//					face->verts[i]->nfaces--;
+	//					face->verts[i]->faces[j] = face->verts[i]->faces[face->verts[i]->nfaces];
+	//					break;
+	//				}
+	//			}
+	//		}
+	//	}
+	//	for (int i = 0; i < 3; i++)
+	//	{
+	//		if (face->edges[i] != nullptr)
+	//		{
+	//			for (int j = 0; j < face->edges[i]->nfaces; j++)
+	//			{
+	//				if (face->edges[i]->faces[j] == face)
+	//				{
+	//					face->edges[i]->faces[j] = nullptr;
+	//					break;
+	//				}
+	//			}
+	//		}
+	//	}
+	//	for (int i = 0; i < 3; i++)
+	//	{
+	//		if (face->corners[i] != nullptr)
+	//		{
+	//			face->corners[i]->face = nullptr;
+	//		}
+	//	}
+	//	// remove from face list and delete object
+	//	nfaces--;
+	//	flist[face->index] = flist[nfaces];
+	//	flist[face->index]->index = face->index;
+	//	delete(face);
+	//}
 
-		// add error quadrics
-		vnew->error_quad += vrem->error_quad;
-
-		// delete old vertex lists and replace with temp lists
-		delete[](vnew->corners);
-		delete[](vnew->edges);
-		delete[](vnew->faces);
-		vnew->corners = ctemp;
-		vnew->edges = etemp;
-		vnew->faces = ftemp;
-		vnew->nedges = ecount;
-		vnew->nfaces = fcount;
-
-		// remove disallowed contractions and update values for others
-		for (int i = 0; i < vnew->pairs.size(); )
-		{
-			if (!vnew->pairs[i]->allowed)
-			{
-				vnew->pairs.erase(vnew->pairs.begin() + i);
-			}
-			else
-			{
-				// update pair costs
-				vnew->pairs[i]->updateError();
-				i++;
-			}
-		}
-
-		// remove from vert list and delete object
-		nverts--;
-		vlist[vrem->index] = vlist[nverts];
-		vlist[vrem->index]->index = vrem->index;
-		delete(vrem);
-	}
+	//void remove_vert(Vertex* vrem, Vertex* vnew)
+	//{
+	//	// initialize new arrays for vertex faces, edges, and corners
+	//	int ccount, ecount, fcount;
+	//	ccount = ecount = fcount = 0;
+	//	Corner** ctemp = new Corner * [vrem->nfaces + vnew->nfaces];
+	//	Edge** etemp = new Edge * [vrem->nedges + vnew->nedges];
+	//	Face** ftemp = new Face * [vrem->nfaces + vnew->nfaces];
+	//	Vertex* vtemp;
+	//	// replace all references to vrem with references to vnew
+	//	for (int i = 0; i < vrem->nfaces; i++)
+	//	{
+	//		if (vrem->corners[i] != nullptr)
+	//		{
+	//			vrem->corners[i]->vert = vnew;
+	//			ctemp[ccount] = vrem->corners[i];
+	//			ccount++;
+	//		}
+	//	}
+	//	for (int i = 0; i < vrem->nedges; i++)
+	//	{
+	//		if (vrem->edges[i] != nullptr)
+	//		{
+	//			if (vrem->edges[i]->verts[0] == vrem) { vrem->edges[i]->verts[0] = vnew; }
+	//			if (vrem->edges[i]->verts[1] == vrem) { vrem->edges[i]->verts[1] = vnew; }
+	//			etemp[ecount] = vrem->edges[i];
+	//			ecount++;
+	//		}
+	//	}
+	//	for (int i = 0; i < vrem->nfaces; i++)
+	//	{
+	//		if (vrem->faces[i] != nullptr)
+	//		{
+	//			for (int j = 0; j < 3; j++)
+	//			{
+	//				if (vrem->faces[i]->verts[j] == vrem)
+	//				{
+	//					vrem->faces[i]->verts[j] = vnew;
+	//					ftemp[fcount] = vrem->faces[i];
+	//					fcount++;
+	//				}
+	//			}
+	//		}
+	//	}
+	//	for (PairContraction* pair : vrem->pairs)
+	//	{
+	//		if (pair->v1 == vrem) { pair->v1 = vnew; }
+	//		else if (pair->v2 == vrem) { pair->v2 = vnew; }
+	//		if (pair->allowed)
+	//		{
+	//			vnew->pairs.push_back(pair);
+	//		}
+	//	}
+	//	// carry over all references originally from vnew
+	//	for (int i = 0; i < vnew->nedges; i++)
+	//	{
+	//		if (vnew->edges[i] != nullptr)
+	//		{
+	//			etemp[ecount] = vnew->edges[i];
+	//			ecount++;
+	//		}
+	//	}
+	//	for (int i = 0; i < vnew->nfaces; i++)
+	//	{
+	//		if (vnew->faces[i] != nullptr)
+	//		{
+	//			ftemp[fcount] = vnew->faces[i];
+	//			fcount++;
+	//		}
+	//	}
+	//	for (int i = 0; i < vnew->nfaces; i++)
+	//	{
+	//		if (vnew->corners[i] != nullptr)
+	//		{
+	//			ctemp[ccount] = vnew->corners[i];
+	//			ccount++;
+	//		}
+	//	}
+	//	// add error quadrics
+	//	vnew->error_quad += vrem->error_quad;
+	//	// delete old vertex lists and replace with temp lists
+	//	delete[](vnew->corners);
+	//	delete[](vnew->edges);
+	//	delete[](vnew->faces);
+	//	vnew->corners = ctemp;
+	//	vnew->edges = etemp;
+	//	vnew->faces = ftemp;
+	//	vnew->nedges = ecount;
+	//	vnew->nfaces = fcount;
+	//	// remove disallowed contractions and update values for others
+	//	for (int i = 0; i < vnew->pairs.size(); )
+	//	{
+	//		if (!vnew->pairs[i]->allowed)
+	//		{
+	//			vnew->pairs.erase(vnew->pairs.begin() + i);
+	//		}
+	//		else
+	//		{
+	//			// update pair costs
+	//			vnew->pairs[i]->updateError();
+	//			i++;
+	//		}
+	//	}
+	//	// remove from vert list and delete object
+	//	nverts--;
+	//	vlist[vrem->index] = vlist[nverts];
+	//	vlist[vrem->index]->index = vrem->index;
+	//	delete(vrem);
+	//}
 
 	//////////////////////////////////////////////////////////
 	// For printing information about the mesh
@@ -1249,10 +1380,10 @@ public:
 			//free(vlist[i]->other_props);
 			delete(vlist[i]);
 		}
-		while (!pair_queue.empty())
+		while (!cont_pairs.empty())
 		{
-			delete(pair_queue.top());
-			pair_queue.pop();
+			delete(*(cont_pairs.begin()));
+			cont_pairs.erase(*(cont_pairs.begin()));
 		}
 
 		delete[](flist);
@@ -1398,28 +1529,43 @@ public:
 
 	void pairSimplify(int face_target, double error_tolerance, int max_contractions)
 	{
+		if (!TRI_MESH) { return; }
+
 		find_valid_pairs(0.0);
+
+		// remove all corners and edges
+		for (int i = 0; i < nedges; i++)
+		{
+			delete[](elist[i]->faces);
+			delete(elist[i]);
+		}
+		for (int i = 0; i < ncorners; i++)
+		{
+			delete(clist[i]);
+		}
+		delete[](elist);
+		delete[](clist);
+		nedges = 0;
+		ncorners = 0;
 
 		// iteratively contract pairs
 		int count = 0;
-		while (!pair_queue.empty())
+		PairContraction* pair;
+		while (!cont_pairs.empty())
 		{
-			// disallow pairs with deleted edges (find a better fix for this)
-			if (pair_queue.top()->edge != nullptr)
-			{
-				if (pair_queue.top()->edge->index < 0 || pair_queue.top()->edge->index > nedges)
-				{
-					pair_queue.top()->allowed = false;
-				}
-			}
-
+			pair = *(cont_pairs.begin());
 			// check if it is allowed
-			if (pair_queue.top()->allowed)
+			if (pair->allowed)
 			{
-				contract_pair(pair_queue.top());
+				//printLine(std::to_string(pair->error));
+				contract_pair(pair);
 				count++;
 			}
-			pair_queue.pop();
+			else
+			{
+				cont_pairs.erase(pair);
+				delete(pair);
+			}
 
 			// check if a stopping point has been reached
 			if ((nfaces <= face_target) || (total_error() > error_tolerance) || (count >= max_contractions))
@@ -1428,11 +1574,10 @@ public:
 			}
 		}
 
+		create_pointers(); // replace this with individual calls
 		calculate_dimensions();
 		create_normals();
-		calculate_corner_angles();
-		calculate_vertex_angles();
-		print_stats();
+		print_vef();
 	}
 
 };
