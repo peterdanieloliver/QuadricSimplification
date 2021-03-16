@@ -709,7 +709,8 @@ private:
 		pair->v1->faces = ftemp;
 		pair->v1->nfaces = fcount;
 
-		// check for degenerate faces in v1 face list
+		// check for degenerate faces in v1 face list and delete, otherwise update normal
+		icVector3 v0, v1, v2;
 		for (int i = 0; i < pair->v1->nfaces; i++)
 		{
 			face = pair->v1->faces[i];
@@ -719,6 +720,14 @@ private:
 			{
 				remove_face(face);
 				i--;
+			}
+			else
+			{
+				v0 = face->verts[0]->pos();
+				v1 = face->verts[1]->pos();
+				v2 = face->verts[2]->pos();
+				face->normal = cross(v0 - v1, v2 - v1);
+				normalize(face->normal);
 			}
 		}
 
@@ -776,16 +785,105 @@ private:
 		delete[](pair->v2->edges);
 		delete[](pair->v2->faces);
 		delete(pair->v2);
+		
+		// check for duplicate faces and delete appropriate faces, verts, and pairs
+		Face* face1;
+		Face* face2;
+		Vertex* vert;
+		for (int i = 0; i < pair->v1->nfaces; i++)
+		{
+			face1 = pair->v1->faces[i];
+			for (int j = i+1; j < pair->v1->nfaces; j++)
+			{
+				face2 = pair->v1->faces[j];
+				if (same_verts(face1, face2))
+				{
+					vert = nullptr;
+
+					// find the vertex to remove
+					for (int k = 0; k < 3; k++)
+					{
+						if (face1->verts[k]->nfaces < 3)
+						{
+							vert = face1->verts[k];
+							break;
+						}
+					}
+
+					// remove faces
+					remove_face(face1);
+					remove_face(face2);
+
+					// remove isolated vertex and associated pairs
+					if (vert != nullptr)
+					{
+						for (PairContraction* degen_pair : vert->pairs)
+						{
+							if (degen_pair->v1 == vert)
+							{
+								degen_pair->v2->pairs.erase(degen_pair);
+							}
+							else
+							{
+								degen_pair->v1->pairs.erase(degen_pair);
+							}
+							cont_pairs.erase(degen_pair);
+							delete(degen_pair);
+						}
+
+						nverts--;
+						vlist[vert->index] = vlist[nverts];
+						vlist[vert->index]->index = vert->index;
+						delete[](vert->corners);
+						delete[](vert->edges);
+						delete[](vert->faces);
+						delete(vert);
+					}
+
+					// wind back i counter
+					i--;
+					break;
+				}
+			}
+		}
 
 		// delete pair contraction
 		delete(pair);
 	}
 
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// YOU ARE HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	//////////////////////////////////////////////////////////
+	// Utility functions for mesh simplification
+	//////////////////////////////////////////////////////////
 
-	// this is returning true every time, need to figure out why
+	void remove_face(Face* face)
+	{
+		// remove from vertex lists
+		Vertex* vert;
+		for (int i = 0; i < 3; i++)
+		{
+			vert = face->verts[i];
+			for (int j = 0; j < vert->nfaces; j++)
+			{
+				if (vert->faces[j] == face)
+				{
+					vert->nfaces--;
+					vert->faces[j] = vert->faces[vert->nfaces];
+				}
+			}
+		}
+
+		// remove from flist
+		nfaces--;
+		flist[face->index] = flist[nfaces];
+		flist[face->index]->index = face->index;
+
+		// delete face
+		delete[](face->edges);
+		delete[](face->verts);
+		delete(face);
+	}
+
+	// tells if given contraction will produce inverted faces
 	bool inverts_faces(PairContraction* pair)
 	{
 		icVector3 vect0, vect1, vect2, new_norm;
@@ -826,7 +924,8 @@ private:
 
 				// compute new face normal and compare to old one
 				new_norm = cross(vect0 - vect1, vect2 - vect1);
-				if (dot(face->normal, new_norm) < 0.0)
+				normalize(new_norm);
+				if (dot(face->normal, new_norm) < 0.5)
 				{
 					return true;
 				}
@@ -868,7 +967,9 @@ private:
 
 				// compute new face normal and compare to old one
 				new_norm = cross(vect0 - vect1, vect2 - vect1);
-				if (dot(face->normal, new_norm) < 0.0)
+				normalize(new_norm);
+				double dprod = dot(face->normal, new_norm);
+				if (dprod < 0.25)
 				{
 					return true;
 				}
@@ -878,36 +979,15 @@ private:
 		return false;
 	}
 
-	//////////////////////////////////////////////////////////
-	// Element deletion functions
-	//////////////////////////////////////////////////////////
-
-	void remove_face(Face* face)
+	// tells if two faces use the same vertices (duplicate vertices)
+	bool same_verts(Face* face1, Face* face2)
 	{
-		// remove from vertex lists
-		Vertex* vert;
-		for (int i = 0; i < 3; i++)
-		{
-			vert = face->verts[i];
-			for (int j = 0; j < vert->nfaces; j++)
-			{
-				if (vert->faces[j] == face)
-				{
-					vert->nfaces--;
-					vert->faces[j] = vert->faces[vert->nfaces];
-				}
-			}
-		}
-
-		// remove from flist
-		nfaces--;
-		flist[face->index] = flist[nfaces];
-		flist[face->index]->index = face->index;
-
-		// delete face
-		delete[](face->edges);
-		delete[](face->verts);
-		delete(face);
+		return (((face1->verts[0] == face2->verts[0]) && (face1->verts[1] == face2->verts[1]) && (face1->verts[2] == face2->verts[2])) ||
+				((face1->verts[0] == face2->verts[0]) && (face1->verts[1] == face2->verts[2]) && (face1->verts[2] == face2->verts[1])) ||
+				((face1->verts[0] == face2->verts[1]) && (face1->verts[1] == face2->verts[2]) && (face1->verts[2] == face2->verts[0])) ||
+				((face1->verts[0] == face2->verts[1]) && (face1->verts[1] == face2->verts[0]) && (face1->verts[2] == face2->verts[2])) ||
+				((face1->verts[0] == face2->verts[2]) && (face1->verts[1] == face2->verts[0]) && (face1->verts[2] == face2->verts[1])) ||
+				((face1->verts[0] == face2->verts[2]) && (face1->verts[1] == face2->verts[1]) && (face1->verts[2] == face2->verts[0])));
 	}
 
 	//////////////////////////////////////////////////////////
@@ -1257,7 +1337,7 @@ public:
 	{
 		if (!TRI_MESH) { return; }
 
-		find_valid_pairs(0.0);
+		find_valid_pairs(mean_elength/2.0);
 
 		// remove all corners and edges
 		for (int i = 0; i < nedges; i++)
@@ -1285,7 +1365,7 @@ public:
 			if (inverts_faces(pair))
 			{
 				cont_pairs.erase(pair);
-				pair->error += 50.0;
+				pair->error += 50;
 				cont_pairs.insert(pair);
 			}
 			else
@@ -1296,7 +1376,7 @@ public:
 			}
 
 			// check if a stopping point has been reached
-			if ((nfaces <= face_target) || (total_error() > error_tolerance) || (count >= max_contractions))
+			if ((nfaces <= face_target) || (total_error() > error_tolerance) || (count >= max_contractions) || (pair->error > 111.0))
 			{
 				break;
 			}
