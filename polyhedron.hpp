@@ -1394,6 +1394,12 @@ public:
 		calculate_dimensions();
 		create_normals();
 		print_vef();
+
+		// if the target number of faces, target error, or max contractions hasn't been hit, recurse
+		if ((nfaces > face_target) && (total_error() < error_tolerance) && (count < max_contractions))
+		{
+			pairSimplify(face_target, error_tolerance, (max_contractions - count));
+		}
 	}
 
 };
