@@ -1365,7 +1365,7 @@ public:
 			if (inverts_faces(pair))
 			{
 				cont_pairs.erase(pair);
-				pair->error += 50;
+				pair->error += (*(cont_pairs.rbegin()))->error;
 				cont_pairs.insert(pair);
 			}
 			else
@@ -1376,12 +1376,20 @@ public:
 			}
 
 			// check if a stopping point has been reached
-			if ((nfaces <= face_target) || (total_error() > error_tolerance) || (count >= max_contractions) || (pair->error > 111.0))
+			if ((nfaces <= face_target) || (total_error() > error_tolerance) || (count >= max_contractions) || (pair->error > 200.0))
 			{
 				break;
 			}
 		}
-
+		
+		for (PairContraction* pair : cont_pairs)
+		{
+			pair->v1->pairs.erase(pair);
+			pair->v2->pairs.erase(pair);
+			delete(pair);
+		}
+		cont_pairs.clear();
+		
 		create_pointers(); // replace this with individual calls
 		calculate_dimensions();
 		create_normals();
