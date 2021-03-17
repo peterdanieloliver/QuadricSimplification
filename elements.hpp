@@ -10,6 +10,8 @@ class Edge;
 class Corner;
 class PairContraction;
 class PairCompare;
+class TripContraction;
+class TripCompare;
 
 //////////////////////////////////////////////////////////
 // Contraction Classes

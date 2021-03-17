@@ -61,7 +61,7 @@ public:
 	}
 };
 
-class PairSimpDialog : public QDialog
+class SimpDialog : public QDialog
 {
 public:
 
@@ -71,7 +71,7 @@ public:
 
 public:
 
-	explicit PairSimpDialog(QWidget* parent = nullptr)
+	explicit SimpDialog(QString title, QWidget* parent = nullptr)
 	{
 		QLabel* targetLabel = new QLabel("Target number of faces:");
 		QLabel* toleranceLabel = new QLabel("Geometric error tolerance:");
@@ -109,7 +109,7 @@ public:
 
 		setLayout(layout);
 
-		setWindowTitle("Pair Contraction Simplification");
+		setWindowTitle(title);
 		Qt::WindowFlags flags = windowFlags();
 		Qt::WindowFlags helpFlag = Qt::WindowContextHelpButtonHint;
 		flags = flags & (~helpFlag);

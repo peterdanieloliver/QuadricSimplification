@@ -207,8 +207,6 @@ private:
 				}
 			}
 		}
-
-		std::cout << std::to_string(nedges) << " edges created" << std::endl;
 	}
 
 	void vertex_to_edge_ptrs()
@@ -386,8 +384,6 @@ private:
 				vert->ccount++;
 			}
 		}
-
-		std::cout << std::to_string(ncorners) << " corners created" << std::endl;
 	}
 
 	void corner_to_corner_ptrs()
@@ -1325,6 +1321,143 @@ private:
 		return false;
 	}
 
+	bool inverts_faces(TripContraction* trip)
+	{
+		icVector3 vect0, vect1, vect2, new_norm;
+		Face* face;
+
+		// look through faces adjacent to v1
+		for (int i = 0; i < trip->v1->nfaces; i++)
+		{
+			face = trip->v1->faces[i];
+
+			// disregard faces that will become degenerate
+			if ((face->verts[0] == trip->v2) || (face->verts[0] == trip->v3) ||
+				(face->verts[1] == trip->v2) || (face->verts[1] == trip->v3) ||
+				(face->verts[2] == trip->v2) || (face->verts[2] == trip->v3))
+			{
+				continue;
+			}
+			else
+			{
+				if (face->verts[0] == trip->v1)
+				{
+					vect0.set(trip->target.x, trip->target.y, trip->target.z);
+					vect1 = face->verts[1]->pos();
+					vect2 = face->verts[2]->pos();
+				}
+				else if (face->verts[1] == trip->v1)
+				{
+					vect0 = face->verts[0]->pos();
+					vect1.set(trip->target.x, trip->target.y, trip->target.z);
+					vect2 = face->verts[2]->pos();
+				}
+				else
+				{
+					vect0 = face->verts[0]->pos();
+					vect1 = face->verts[1]->pos();
+					vect2.set(trip->target.x, trip->target.y, trip->target.z);
+				}
+
+				// compute new face normal and compare to old one
+				new_norm = cross(vect0 - vect1, vect2 - vect1);
+				normalize(new_norm);
+				if (dot(face->normal, new_norm) < 0.5)
+				{
+					return true;
+				}
+			}
+		}
+
+		// look through faces adjacent to v2
+		for (int i = 0; i < trip->v2->nfaces; i++)
+		{
+			face = trip->v2->faces[i];
+
+			// disregard faces that will become degenerate
+			if ((face->verts[0] == trip->v1) || (face->verts[0] == trip->v3) ||
+				(face->verts[1] == trip->v1) || (face->verts[1] == trip->v3) ||
+				(face->verts[2] == trip->v1) || (face->verts[2] == trip->v3))
+			{
+				continue;
+			}
+			else
+			{
+				if (face->verts[0] == trip->v2)
+				{
+					vect0.set(trip->target.x, trip->target.y, trip->target.z);
+					vect1 = face->verts[1]->pos();
+					vect2 = face->verts[2]->pos();
+				}
+				else if (face->verts[1] == trip->v2)
+				{
+					vect0 = face->verts[0]->pos();
+					vect1.set(trip->target.x, trip->target.y, trip->target.z);
+					vect2 = face->verts[2]->pos();
+				}
+				else
+				{
+					vect0 = face->verts[0]->pos();
+					vect1 = face->verts[1]->pos();
+					vect2.set(trip->target.x, trip->target.y, trip->target.z);
+				}
+
+				// compute new face normal and compare to old one
+				new_norm = cross(vect0 - vect1, vect2 - vect1);
+				normalize(new_norm);
+				if (dot(face->normal, new_norm) < 0.5)
+				{
+					return true;
+				}
+			}
+		}
+
+		// look through faces adjacent to v3
+		for (int i = 0; i < trip->v3->nfaces; i++)
+		{
+			face = trip->v3->faces[i];
+
+			// disregard faces that will become degenerate
+			if ((face->verts[0] == trip->v2) || (face->verts[0] == trip->v1) ||
+				(face->verts[1] == trip->v2) || (face->verts[1] == trip->v1) ||
+				(face->verts[2] == trip->v2) || (face->verts[2] == trip->v1))
+			{
+				continue;
+			}
+			else
+			{
+				if (face->verts[0] == trip->v3)
+				{
+					vect0.set(trip->target.x, trip->target.y, trip->target.z);
+					vect1 = face->verts[1]->pos();
+					vect2 = face->verts[2]->pos();
+				}
+				else if (face->verts[1] == trip->v3)
+				{
+					vect0 = face->verts[0]->pos();
+					vect1.set(trip->target.x, trip->target.y, trip->target.z);
+					vect2 = face->verts[2]->pos();
+				}
+				else
+				{
+					vect0 = face->verts[0]->pos();
+					vect1 = face->verts[1]->pos();
+					vect2.set(trip->target.x, trip->target.y, trip->target.z);
+				}
+
+				// compute new face normal and compare to old one
+				new_norm = cross(vect0 - vect1, vect2 - vect1);
+				normalize(new_norm);
+				if (dot(face->normal, new_norm) < 0.5)
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
 	// tells if two faces use the same vertices (duplicate vertices)
 	bool same_verts(Face* face1, Face* face2)
 	{
@@ -1350,21 +1483,15 @@ private:
 		return error_sum;
 	}
 
-	void print_vef()
-	{
-		std::cout << "Geometric Error = " << std::to_string(total_error()) << std::endl;
-		int v_e_f = nverts - nedges + nfaces;
-		std::cout << "V-E+F = " << std::to_string(v_e_f) << std::endl << std::endl;
-	}
-
 	void print_stats()
 	{
 		std::cout << "# Verts = " << std::to_string(nverts) << std::endl;
 		std::cout << "# Edges =	" << std::to_string(nedges) << std::endl;
 		std::cout << "# Faces = " << std::to_string(nfaces) << std::endl;
 		std::cout << "# Corners = " << std::to_string(ncorners) << std::endl;
+		int v_e_f = nverts - nedges + nfaces;
+		std::cout << "V-E+F = " << std::to_string(v_e_f) << std::endl << std::endl;
 		std::cout << "Geometric Error = " << std::to_string(total_error()) << std::endl;
-		print_vef();
 	}
 
 // methods
@@ -1404,8 +1531,6 @@ public:
 					vlist[j] = new Vertex(vert.x, vert.y, vert.z);
 					vlist[j]->other_props = vert.other_props;
 				}
-
-				std::cout << std::to_string(nverts) << " vertices created" << std::endl;
 			}
 			else if (equal_strings("face", elem_name))
 			{
@@ -1440,8 +1565,6 @@ public:
 					// check if mesh is a tri mesh
 					if (face.nverts != 3) { TRI_MESH = false; }
 				}
-
-				std::cout << std::to_string(nfaces) << " faces created" << std::endl;
 			}
 			else
 			{
@@ -1504,8 +1627,7 @@ public:
 		calculate_dimensions();
 		create_normals();
 		calc_error_quadrics();
-
-		if(TRI_MESH) { print_vef(); }
+		print_stats();
 	}
 
 	void finalize()
@@ -1683,7 +1805,7 @@ public:
 	{
 		if (!TRI_MESH) { return; }
 
-		find_valid_pairs(mean_elength/2.0);
+		find_valid_pairs(mean_elength);
 
 		// remove all corners and edges
 		for (int i = 0; i < nedges; i++)
@@ -1699,6 +1821,9 @@ public:
 		delete[](clist);
 		nedges = 0;
 		ncorners = 0;
+
+		// record initial number of faces
+		int faces_in = nfaces;
 
 		// iteratively contract pairs
 		int count = 0;
@@ -1728,6 +1853,7 @@ public:
 			}
 		}
 		
+		// clear out pair contractions list
 		for (PairContraction* pair : cont_pairs)
 		{
 			pair->v1->pairs.erase(pair);
@@ -1736,16 +1862,91 @@ public:
 		}
 		cont_pairs.clear();
 		
-		create_pointers(); // replace this with individual calls
+		// reconstruct edges and corners
+		create_pointers();
 		calculate_dimensions();
 		create_normals();
-		print_vef();
+		print_stats();
 
 		// if the target number of faces, target error, or max contractions hasn't been hit, recurse
-		if ((nfaces > face_target) && (total_error() < error_tolerance) && (count < max_contractions))
+		if ((nfaces > face_target) && (total_error() < error_tolerance) && (count < max_contractions) && (nfaces < faces_in))
 		{
 			pairSimplify(face_target, error_tolerance, (max_contractions - count));
 		}
 	}
 
+	void tripletSimplify(int face_target, double error_tolerance, int max_contractions)
+	{
+		if (!TRI_MESH) { return; }
+
+		find_valid_trips(mean_elength);
+
+		// remove all corners and edges
+		for (int i = 0; i < nedges; i++)
+		{
+			delete[](elist[i]->faces);
+			delete(elist[i]);
+		}
+		for (int i = 0; i < ncorners; i++)
+		{
+			delete(clist[i]);
+		}
+		delete[](elist);
+		delete[](clist);
+		nedges = 0;
+		ncorners = 0;
+
+		// record initial number of faces
+		int faces_in = nfaces;
+
+		// iteratively contract triplets
+		int count = 0;
+		TripContraction* trip;
+		while (!cont_trips.empty())
+		{
+			trip = *(cont_trips.begin());
+
+			// check for flipped face normals
+			if (inverts_faces(trip))
+			{
+				cont_trips.erase(trip);
+				trip->error += (*(cont_trips.rbegin()))->error;
+				cont_trips.insert(trip);
+			}
+			else
+			{
+				//printLine(std::to_string(trip->error));
+				contract_trip(trip);
+				count++;
+			}
+
+			// check if a stopping point has been reached
+			if ((nfaces <= face_target) || (total_error() > error_tolerance) || (count >= max_contractions) || (trip->error > error_tolerance))
+			{
+				break;
+			}
+		}
+
+		// clear out triplet contractions list
+		for (TripContraction* trip : cont_trips)
+		{
+			trip->v1->trips.erase(trip);
+			trip->v2->trips.erase(trip);
+			trip->v3->trips.erase(trip);
+			delete(trip);
+		}
+		cont_trips.clear();
+
+		// reconstruct edges and corners
+		create_pointers();
+		calculate_dimensions();
+		create_normals();
+		print_stats();
+
+		// if the target number of faces, target error, or max contractions hasn't been hit, recurse
+		if ((nfaces > face_target) && (total_error() < error_tolerance) && (count < max_contractions) && (nfaces < faces_in))
+		{
+			tripletSimplify(face_target, error_tolerance, (max_contractions - count));
+		}
+	}
 };

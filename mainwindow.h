@@ -88,6 +88,11 @@ public:
 		meshMenu->addAction(meshPairSimp);
 		connect(meshPairSimp, &QAction::triggered, this, &MainWindow::onMeshPairSimp);
 
+		QAction* meshTripSimp = new QAction(meshMenu);
+		meshTripSimp->setText(tr("Triplet Simplify"));
+		meshMenu->addAction(meshTripSimp);
+		connect(meshTripSimp, &QAction::triggered, this, &MainWindow::onMeshTripSimp);
+
 		setMenuBar(menuBar);
 	}
 
@@ -199,7 +204,7 @@ private slots:
 
 	void onMeshPairSimp()
 	{
-		PairSimpDialog pairDialog(this);
+		SimpDialog pairDialog("Pair Contraction Simplification",this);
 		pairDialog.setModal(true);
 		int result = pairDialog.exec();
 		if (result == QDialog::Accepted)
@@ -225,6 +230,36 @@ private slots:
 			message = QString("\tPair contraction simplification complete, %1 elapsed").arg(QString::number(time_elapsed));
 			printLine(message.toStdString());
 		}
+	}
+
+	void onMeshTripSimp()
+	{
+		SimpDialog tripDialog("Triplet Contraction Simplification", this);
+		tripDialog.setModal(true);
+		int result = tripDialog.exec();
+		if (result == QDialog::Accepted)
+		{
+			// grab values from dialog
+			int faceTarget = tripDialog.targetSelector->value();
+			double errorTolerance = tripDialog.toleranceSelector->value();
+			int maxContractions = tripDialog.maxSelector->value();
+			// Simplification initiated message
+			QString message = QString("Initiated triplet contraction mesh simplification with %1 target face count, %2 geometric error tolerance, %3 max contractions:")
+				.arg(QString::number(faceTarget), QString::number(errorTolerance), QString::number(maxContractions));
+			printLine(message.toStdString(), true);
+
+			// execute simplification and time execution
+			QTime timer;
+			timer.start();
+			window->getGLWidget()->getScene()->mesh->tripletSimplify(faceTarget, errorTolerance, maxContractions);
+			window->getGLWidget()->getScene()->setNeedsUpdate();
+			int time_elapsed = timer.elapsed();
+
+			// Simplification finished message
+			message = QString("\tTriplet contraction simplification complete, %1 elapsed").arg(QString::number(time_elapsed));
+			printLine(message.toStdString());
+		}
+
 	}
 
 };
