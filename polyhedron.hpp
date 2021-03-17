@@ -931,7 +931,270 @@ private:
 
 	void contract_trip(TripContraction* trip)
 	{
+		// add error quadrics
+		trip->v1->error_quad += (trip->v2->error_quad + trip->v3->error_quad);
 
+		// move all vertices to the target position
+		trip->v1->set_pos(trip->target.x, trip->target.y, trip->target.z);
+		trip->v2->set_pos(trip->target.x, trip->target.y, trip->target.z);
+		trip->v3->set_pos(trip->target.x, trip->target.y, trip->target.z);
+
+		// initialize a new array for the face pointers in v1
+		Face** ftemp = new Face * [trip->v1->nfaces + trip->v2->nfaces + trip->v3->nfaces];
+		int fcount = 0;
+
+		// move all faces in v1 to ftemp
+		Face* face;
+		for (int i = 0; i < trip->v1->nfaces; i++)
+		{
+			face = trip->v1->faces[i];
+			ftemp[fcount] = face;
+			fcount++;
+		}
+
+		// replace all face references to v2 with v1 and move to ftemp
+		for (int i = 0; i < trip->v2->nfaces; i++)
+		{
+			face = trip->v2->faces[i];
+			for (int j = 0; j < 3; j++)
+			{
+				if (face->verts[j] == trip->v2)
+				{
+					face->verts[j] == trip->v1;
+				}
+			}
+
+			ftemp[fcount] = face;
+			fcount++;
+		}
+
+		// replace all face references to v3 with v1 and move to ftemp
+		for (int i = 0; i < trip->v3->nfaces; i++)
+		{
+			face = trip->v3->faces[i];
+			for (int j = 0; j < 3; j++)
+			{
+				if (face->verts[j] == trip->v3)
+				{
+					face->verts[j] = trip->v1;
+				}
+			}
+
+			ftemp[fcount] = face;
+			fcount++;
+		}
+
+		// set v1 face list to ftemp
+		delete[](trip->v1->faces);
+		trip->v1->faces = ftemp;
+		trip->v1->nfaces = fcount;
+
+		// check for degenerate faces in v1 face list and delete, otherwise update normal
+		icVector3 v0, v1, v2;
+		for (int i = 0; i < trip->v1->nfaces; i++)
+		{
+			face = trip->v1->faces[i];
+			if (face->verts[0] == face->verts[1] ||
+				face->verts[1] == face->verts[2] ||
+				face->verts[2] == face->verts[0])
+			{
+				remove_face(face);
+				i--;
+			}
+			else
+			{
+				v0 = face->verts[0]->pos();
+				v1 = face->verts[1]->pos();
+				v2 = face->verts[2]->pos();
+				face->normal = cross(v0 - v1, v2 - v1);
+				normalize(face->normal);
+			}
+		}
+
+		// erase contraction from vertices and global set
+		trip->v1->trips.erase(trip);
+		trip->v2->trips.erase(trip);
+		trip->v3->trips.erase(trip);
+		cont_trips.erase(trip);
+
+		// move all triplet contractions from v2 to v1
+		for (TripContraction* contv2 : trip->v2->trips)
+		{
+			// erase from global set
+			cont_trips.erase(contv2);
+			
+			// switch v2 references to v1
+			if (contv2->v1 == trip->v2)
+			{
+				contv2->v1 = trip->v1;
+			}
+			else if (contv2->v2 == trip->v2)
+			{
+				contv2->v2 = trip->v1;
+			}
+			else if (contv2->v3 == trip->v2)
+			{
+				contv2->v3 = trip->v1;
+			}
+
+			// find any duplicate triplets and erase
+			for (TripContraction* contv1 : trip->v1->trips)
+			{
+				if (contv2->same_verts(contv1))
+				{
+					contv2->v1->trips.erase(contv2);
+					contv2->v2->trips.erase(contv2);
+					contv2->v3->trips.erase(contv2);
+					contv2->allowed = false;
+					break;
+				}
+			}
+
+			// add to v1 trip set if allowed
+			if (contv2->allowed)
+			{
+				contv2->computeError();
+				trip->v1->trips.insert(contv2);
+				cont_trips.insert(contv2);
+			}
+			else
+			{
+				delete(contv2);
+			}
+		}
+
+		// move all triplet contractions from v3 to v1
+		for (TripContraction* contv3 : trip->v3->trips)
+		{
+			// erase from global set
+			cont_trips.erase(contv3);
+
+			// switch v2 references to v1
+			if (contv3->v1 == trip->v3)
+			{
+				contv3->v1 = trip->v1;
+			}
+			else if (contv3->v2 == trip->v3)
+			{
+				contv3->v2 = trip->v1;
+			}
+			else if (contv3->v3 == trip->v3)
+			{
+				contv3->v3 = trip->v1;
+			}
+
+			// find any duplicate triplets and erase
+			for (TripContraction* contv1 : trip->v1->trips)
+			{
+				if (contv3->same_verts(contv1))
+				{
+					contv3->v1->trips.erase(contv3);
+					contv3->v2->trips.erase(contv3);
+					contv3->v3->trips.erase(contv3);
+					contv3->allowed = false;
+					break;
+				}
+			}
+
+			// add to v1 trip set if allowed
+			if (contv3->allowed)
+			{
+				contv3->computeError();
+				trip->v1->trips.insert(contv3);
+				cont_trips.insert(contv3);
+			}
+			else
+			{
+				delete(contv3);
+			}
+		}
+
+		// delete v2 and v3 from vlist
+		nverts--;
+		vlist[trip->v2->index] = vlist[nverts];
+		vlist[trip->v2->index]->index = trip->v2->index;
+		delete[](trip->v2->corners);
+		delete[](trip->v2->edges);
+		delete[](trip->v2->faces);
+		delete(trip->v2);
+
+		nverts--;
+		vlist[trip->v3->index] = vlist[nverts];
+		vlist[trip->v3->index]->index = trip->v3->index;
+		delete[](trip->v3->corners);
+		delete[](trip->v3->edges);
+		delete[](trip->v3->faces);
+		delete(trip->v2);
+
+		// check for duplicate faces and delete appropriate faces, vers, and pairs
+		Face* face1;
+		Face* face2;
+		Vertex* vert;
+		for (int i = 0; i < trip->v1->nfaces; i++)
+		{
+			face1 = trip->v1->faces[i];
+			for (int j = i + 1; j < trip->v1->nfaces; j++)
+			{
+				face2 = trip->v1->faces[j];
+				if (same_verts(face1, face2))
+				{
+					vert = nullptr;
+
+					// find vertex to remove
+					for (int k = 0; k < 3; k++)
+					{
+						if (face1->verts[k]->nfaces < 3)
+						{
+							vert = face1->verts[k];
+							break;
+						}
+					}
+
+					// remove faces
+					remove_face(face1);
+					remove_face(face2);
+
+					// remove isolated vertex and associated triplets
+					if (vert != nullptr)
+					{
+						for (TripContraction* degen_trip : vert->trips)
+						{
+							if (degen_trip->v1 == vert)
+							{
+								degen_trip->v2->trips.erase(degen_trip);
+								degen_trip->v3->trips.erase(degen_trip);
+							}
+							else if (degen_trip->v2 == vert)
+							{
+								degen_trip->v1->trips.erase(degen_trip);
+								degen_trip->v3->trips.erase(degen_trip);
+							}
+							else
+							{
+								degen_trip->v1->trips.erase(degen_trip);
+								degen_trip->v2->trips.erase(degen_trip);
+							}
+							cont_trips.erase(degen_trip);
+							delete(degen_trip);
+						}
+
+						nverts--;
+						vlist[vert->index] = vlist[nverts];
+						vlist[vert->index]->index = vert->index;
+						delete[](vert->corners);
+						delete[](vert->edges);
+						delete[](vert->faces);
+						delete(vert);
+					}
+
+					i--;
+					break;
+				}
+			}
+		}
+
+		// delete triplet contraction
+		delete(trip);
 	}
 
 	//////////////////////////////////////////////////////////
