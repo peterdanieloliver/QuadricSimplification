@@ -57,8 +57,7 @@ public:
 
 	// contraction containers
 	std::set<PairContraction*, PairCompare> cont_pairs;
-	//std::priority_queue<PairContraction*, std::vector<PairContraction*>, PairCompare> pair_queue;
-	//std::vector<PairContraction*> pair_heap;
+	std::set<TripContraction*, TripCompare> cont_trips;
 
 // private helper functions
 private:
@@ -849,6 +848,90 @@ private:
 
 		// delete pair contraction
 		delete(pair);
+	}
+
+	void find_valid_trips(double threshold)
+	{
+		Vertex* v1;
+		Vertex* v2;
+		Vertex* v3;
+		Face* face;
+		Edge* edge;
+		double mlength;
+		bool connect2, connect3;
+		TripContraction* contraction;
+
+		// search through all vertex triplets
+		for (int i = 0; i < nverts; i++)
+		{
+			v1 = vlist[i];
+			for (int j = (i + 1); j < nverts; j++)
+			{
+				v2 = vlist[j];
+				for (int k = (j + 1); k < nverts; k++)
+				{
+					v3 = vlist[k];
+					connect2 = false;
+					connect3 = false;
+
+					// check to see if the verts are connected
+					for (int m = 0; m < v1->nedges; m++)
+					{
+						edge = v1->edges[m];
+						if (edge->getOtherVert(v1) == v2)
+						{
+							connect2 = true;
+							if (connect3) { break; }
+							for (int n = 0; n < v2->nedges; n++)
+							{
+								edge = v2->edges[n];
+								if (edge->getOtherVert(v2) == v3)
+								{
+									connect3 = true;
+									break;
+								}
+							}
+						}
+						else if (edge->getOtherVert(v1) == v3)
+						{
+							connect3 = true;
+							if (connect2) { break; }
+							for (int n = 0; n < v3->nedges; n++)
+							{
+								edge = v3->edges[n];
+								if (edge->getOtherVert(v3) == v2)
+								{
+									connect2 = true;
+									break;
+								}
+							}
+						}
+
+						if (connect2 && connect3) { break; }
+					}
+
+					// find the mean distance between all the points
+					mlength = (length(v1->pos() - v2->pos()) + 
+							   length(v2->pos() - v3->pos()) + 
+							   length(v3->pos() - v1->pos())) / 3.0;
+
+					// create the contraction if either condition is satisfied
+					if ((mlength < threshold) || (connect2 && connect3))
+					{
+						contraction = new TripContraction(v1, v2, v3);
+						cont_trips.insert(contraction);
+						v1->trips.insert(contraction);
+						v2->trips.insert(contraction);
+						v3->trips.insert(contraction);
+					}
+				}
+			}
+		}
+	}
+
+	void contract_trip(TripContraction* trip)
+	{
+
 	}
 
 	//////////////////////////////////////////////////////////

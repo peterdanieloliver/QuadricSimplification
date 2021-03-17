@@ -43,6 +43,7 @@ public:
 
 	icMatrix4x4 error_quad;
 	std::unordered_set<PairContraction*> pairs;
+	std::unordered_set<TripContraction*> trips;
 
 	void* other_props;
 
@@ -272,17 +273,109 @@ public:
 	}
 };
 
-bool pairCompare(const PairContraction* p1, const PairContraction* p2)
-{
-	return (p1->error > p2->error);
-}
-
 class PairCompare
 {
 public:
 	int operator() (const PairContraction* p1, const PairContraction* p2) const
 	{
 		return (p1->error < p2->error);
+	}
+};
+
+class TripContraction
+{
+public:
+
+	Vertex* v1;
+	Vertex* v2;
+	Vertex* v3;
+
+	icMatrix4x4 error_quad;
+	icVector4 target;
+	double error;
+	bool allowed = true;
+
+public:
+
+	TripContraction(Vertex* vert1, Vertex* vert2, Vertex* vert3)
+	{
+		// set up field variables
+		v1 = vert1;
+		v2 = vert2;
+		v3 = vert3;
+
+		computeError();
+	}
+
+	void computeError()
+	{
+		error_quad = v1->error_quad + v2->error_quad + v3->error_quad;
+
+		// compute optimum contraction target
+		icVector4 tvect(0.0, 0.0, 0.0, 1.0);
+		icMatrix4x4 temp(error_quad);
+		temp.entry[3][0] = 0;
+		temp.entry[3][1] = 0;
+		temp.entry[3][2] = 0;
+		temp.entry[3][3] = 1;
+
+		if (determinant(temp) != 0.0)
+		{
+			target = inverse(temp) * tvect;
+		}
+		else
+		{
+			//if the matrix is not invertible, choose between the points and the center point
+			icVector4 p1 = v1->pos4();
+			icVector4 p2 = v2->pos4();
+			icVector4 p3 = v3->pos4();
+			icVector4 center((v1->x + v2->x + v3->x) / 3,
+							(v1->y + v2->y + v3->y) / 3,
+							(v1->z + v2->z + v3->z) / 3, 1.0);
+
+			double err1 = dot((p1 * error_quad), p1);
+			double err2 = dot((p2 * error_quad), p2);
+			double err3 = dot((p3 * error_quad), p3);
+			double ecenter = dot((center * error_quad), center);
+
+			if (err1 < err2 && err1 < err3 && err1 < ecenter)
+			{
+				target = p1;
+			}
+			else if (err2 < err1 && err2 < err3 && err2 < ecenter)
+			{
+				target = p2;
+			}
+			else if (err3 < err1 && err3 < err2 && err3 < ecenter)
+			{
+				target = p3;
+			}
+			else
+			{
+				target = center;
+			}
+		}
+
+		error = dot((target * error_quad), target);
+	}
+
+	bool same_verts(TripContraction* that)
+	{
+		return (((this->v1 == that->v1) && (this->v2 == that->v2) && (this->v3 == that->v3)) ||
+				((this->v1 == that->v1) && (this->v2 == that->v3) && (this->v3 == that->v2)) ||
+				((this->v1 == that->v2) && (this->v2 == that->v3) && (this->v3 == that->v1)) ||
+				((this->v1 == that->v2) && (this->v2 == that->v1) && (this->v3 == that->v3)) ||
+				((this->v1 == that->v3) && (this->v2 == that->v1) && (this->v3 == that->v2)) ||
+				((this->v1 == that->v3) && (this->v2 == that->v2) && (this->v3 == that->v1)));
+	}
+};
+
+class TripCompare
+{
+public:
+	int operator() (const TripContraction* t1, const TripContraction* t2) const
+	{
+		return (t1->error < t2->error);
 	}
 };
 
