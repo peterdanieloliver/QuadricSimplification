@@ -90,7 +90,7 @@ public:
 		maxSelector = new QSpinBox;
 		maxSelector->setRange(1, 1000000);
 		maxSelector->setSingleStep(1);
-		maxSelector->setValue(512);
+		maxSelector->setValue(20000);
 
 		QPushButton* okButton = new QPushButton("&OK", this);
 		connect(okButton, &QPushButton::clicked, this, &SmoothDialog::accept);

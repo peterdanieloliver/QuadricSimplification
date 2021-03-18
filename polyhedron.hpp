@@ -58,6 +58,7 @@ public:
 	// contraction containers
 	std::set<PairContraction*, PairCompare> cont_pairs;
 	std::set<TripContraction*, TripCompare> cont_trips;
+	double angle_tol = 0.5;
 
 	// private helper functions
 private:
@@ -623,7 +624,7 @@ private:
 		Vertex* vert;
 		Vertex* oppo;
 		Edge* edge;
-		icVector3 temp;
+		double distance;
 		bool is_edge;
 		PairContraction* contraction;
 
@@ -648,8 +649,8 @@ private:
 				}
 
 				// check the distance between points
-				temp = (oppo->pos() - vert->pos());
-				if ((length(temp) < threshold) || is_edge)
+				distance = length(oppo->pos() - vert->pos());
+				if (distance < threshold || is_edge)
 				{
 					// create contraction and insert into priority queue
 					contraction = new PairContraction(vert, oppo);
@@ -1352,7 +1353,8 @@ private:
 				// compute new face normal and compare to old one
 				new_norm = cross(vect0 - vect1, vect2 - vect1);
 				normalize(new_norm);
-				if (dot(face->normal, new_norm) < 0.5)
+				double dprod = dot(face->normal, new_norm);
+				if (dprod < angle_tol)
 				{
 					return true;
 				}
@@ -1396,7 +1398,7 @@ private:
 				new_norm = cross(vect0 - vect1, vect2 - vect1);
 				normalize(new_norm);
 				double dprod = dot(face->normal, new_norm);
-				if (dprod < 0.25)
+				if (dprod < angle_tol)
 				{
 					return true;
 				}
@@ -1447,7 +1449,7 @@ private:
 				// compute new face normal and compare to old one
 				new_norm = cross(vect0 - vect1, vect2 - vect1);
 				normalize(new_norm);
-				if (dot(face->normal, new_norm) < 0.5)
+				if (dot(face->normal, new_norm) < angle_tol)
 				{
 					return true;
 				}
@@ -1490,7 +1492,7 @@ private:
 				// compute new face normal and compare to old one
 				new_norm = cross(vect0 - vect1, vect2 - vect1);
 				normalize(new_norm);
-				if (dot(face->normal, new_norm) < 0.5)
+				if (dot(face->normal, new_norm) < angle_tol)
 				{
 					return true;
 				}
@@ -1533,7 +1535,7 @@ private:
 				// compute new face normal and compare to old one
 				new_norm = cross(vect0 - vect1, vect2 - vect1);
 				normalize(new_norm);
-				if (dot(face->normal, new_norm) < 0.5)
+				if (dot(face->normal, new_norm) < angle_tol)
 				{
 					return true;
 				}
