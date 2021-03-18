@@ -41,7 +41,7 @@ public:
 	// vertices
 	Vertex** vlist;
 	int nverts;
-	
+
 	// corners
 	Corner** clist;
 	int ncorners;
@@ -59,7 +59,7 @@ public:
 	std::set<PairContraction*, PairCompare> cont_pairs;
 	std::set<TripContraction*, TripCompare> cont_trips;
 
-// private helper functions
+	// private helper functions
 private:
 
 	//////////////////////////////////////////////////////////
@@ -363,7 +363,7 @@ private:
 				for (int k = 0; k < face->nedges; k++)
 				{
 					// find opposite edge
-					if (face->edges[k]->verts[0] != vert && 
+					if (face->edges[k]->verts[0] != vert &&
 						face->edges[k]->verts[1] != vert)
 					{
 						edge = face->edges[k];
@@ -563,13 +563,13 @@ private:
 	void calc_face_area(Face* face)
 	{
 		icVector3 v1, v2, sum, center;
-		
+
 		for (int i = 0; i < face->nverts; i++)
 		{
 			v1.set(face->verts[i]->x, face->verts[i]->y, face->verts[i]->z);
-			v2.set(face->verts[(i + 1) % face->nverts]->x, 
-				   face->verts[(i + 1) % face->nverts]->y,
-				   face->verts[(i + 1) % face->nverts]->z);
+			v2.set(face->verts[(i + 1) % face->nverts]->x,
+				face->verts[(i + 1) % face->nverts]->y,
+				face->verts[(i + 1) % face->nverts]->z);
 
 			sum = sum + cross(v1, v2);
 
@@ -577,7 +577,7 @@ private:
 			center.y += face->verts[i]->y;
 			center.z += face->verts[i]->z;
 		}
-		
+
 		face->area = 0.5 * length(sum);
 		center /= (double)face->nverts;
 		face->center = center;
@@ -607,9 +607,9 @@ private:
 					face->normal.x,
 					face->normal.y,
 					face->normal.z,
-					-(	(face->normal.x * face->verts[0]->x) +
-						(face->normal.y * face->verts[0]->y) + 
-						(face->normal.z * face->verts[0]->z) )
+					-((face->normal.x * face->verts[0]->x) +
+						(face->normal.y * face->verts[0]->y) +
+						(face->normal.z * face->verts[0]->z))
 				);
 
 				vert->error_quad += square(plane);
@@ -631,7 +631,7 @@ private:
 		for (int i = 0; i < nverts; i++)
 		{
 			vert = vlist[i];
-			for (int j = (i+1); j < nverts; j++)
+			for (int j = (i + 1); j < nverts; j++)
 			{
 				oppo = vlist[j];
 				is_edge = false;
@@ -646,7 +646,7 @@ private:
 						break;
 					}
 				}
-				
+
 				// check the distance between points
 				temp = (oppo->pos() - vert->pos());
 				if ((length(temp) < threshold) || is_edge)
@@ -658,6 +658,20 @@ private:
 					oppo->pairs.insert(contraction);
 				}
 			}
+		}
+	}
+
+	void find_connected_pairs()
+	{
+		PairContraction* contraction;
+		Edge* edge;
+		for (int i = 0; i < nedges; i++)
+		{
+			edge = elist[i];
+			contraction = new PairContraction(edge->verts[0], edge->verts[1]);
+			cont_pairs.insert(contraction);
+			edge->verts[0]->pairs.insert(contraction);
+			edge->verts[1]->pairs.insert(contraction);
 		}
 	}
 
@@ -736,7 +750,7 @@ private:
 		{
 			// erase from global set
 			cont_pairs.erase(contv2);
-			
+
 			// switch v2 references to v1
 			if (contv2->v1 == pair->v2)
 			{
@@ -780,7 +794,7 @@ private:
 		delete[](pair->v2->edges);
 		delete[](pair->v2->faces);
 		delete(pair->v2);
-		
+
 		// check for duplicate faces and delete appropriate faces, verts, and pairs
 		Face* face1;
 		Face* face2;
@@ -788,7 +802,7 @@ private:
 		for (int i = 0; i < pair->v1->nfaces; i++)
 		{
 			face1 = pair->v1->faces[i];
-			for (int j = i+1; j < pair->v1->nfaces; j++)
+			for (int j = i + 1; j < pair->v1->nfaces; j++)
 			{
 				face2 = pair->v1->faces[j];
 				if (same_verts(face1, face2))
@@ -907,12 +921,69 @@ private:
 					}
 
 					// find the mean distance between all the points
-					mlength = (length(v1->pos() - v2->pos()) + 
-							   length(v2->pos() - v3->pos()) + 
-							   length(v3->pos() - v1->pos())) / 3.0;
+					mlength = (length(v1->pos() - v2->pos()) +
+						length(v2->pos() - v3->pos()) +
+						length(v3->pos() - v1->pos())) / 3.0;
 
 					// create the contraction if either condition is satisfied
 					if ((mlength < threshold) || (connect2 && connect3))
+					{
+						contraction = new TripContraction(v1, v2, v3);
+						cont_trips.insert(contraction);
+						v1->trips.insert(contraction);
+						v2->trips.insert(contraction);
+						v3->trips.insert(contraction);
+					}
+				}
+			}
+		}
+	}
+
+	void find_connected_trips()
+	{
+		TripContraction* contraction;
+		Face* face;
+		Vertex* v1;
+		Vertex* v2;
+		Vertex* v3;
+		Edge* edge;
+		bool duplicate;
+
+		// add all triplets that are faces
+		for (int i = 0; i < nfaces; i++)
+		{
+			face = flist[i];
+			contraction = new TripContraction(face->verts[0], face->verts[1], face->verts[2]);
+			cont_trips.insert(contraction);
+			face->verts[0]->trips.insert(contraction);
+			face->verts[1]->trips.insert(contraction);
+			face->verts[2]->trips.insert(contraction);
+		}
+
+		// search through edges at each vertex
+		for (int i = 0; i < nverts; i++)
+		{
+			v1 = vlist[i];
+			for (int j = 0; j < v1->nedges; j++)
+			{
+				v2 = v1->edges[j]->getOtherVert(v1);
+				for (int k = (j + 1); k < v1->nedges; k++)
+				{
+					v3 = v1->edges[k]->getOtherVert(v1);
+					duplicate = false;
+
+					// check for v2 in v3
+					for (int m = 0; m < v3->nedges; m++)
+					{
+						if (v3->edges[m]->getOtherVert(v3) == v2)
+						{
+							duplicate = true;
+							break;
+						}
+					}
+
+					// create contraction
+					if (!duplicate)
 					{
 						contraction = new TripContraction(v1, v2, v3);
 						cont_trips.insert(contraction);
@@ -939,11 +1010,19 @@ private:
 		Face** ftemp = new Face * [trip->v1->nfaces + trip->v2->nfaces + trip->v3->nfaces];
 		int fcount = 0;
 
+		Vertex* vertex0;
+		Vertex* vertex1;
+		Vertex* vertex2;
+
 		// move all faces in v1 to ftemp
 		Face* face;
+		
 		for (int i = 0; i < trip->v1->nfaces; i++)
 		{
 			face = trip->v1->faces[i];
+			vertex0 = face->verts[0];
+			vertex1 = face->verts[1];
+			vertex2 = face->verts[2];
 			ftemp[fcount] = face;
 			fcount++;
 		}
@@ -952,11 +1031,14 @@ private:
 		for (int i = 0; i < trip->v2->nfaces; i++)
 		{
 			face = trip->v2->faces[i];
+			vertex0 = face->verts[0];
+			vertex1 = face->verts[1];
+			vertex2 = face->verts[2];
 			for (int j = 0; j < 3; j++)
 			{
 				if (face->verts[j] == trip->v2)
 				{
-					face->verts[j] == trip->v1;
+					face->verts[j] = trip->v1;
 				}
 			}
 
@@ -968,6 +1050,9 @@ private:
 		for (int i = 0; i < trip->v3->nfaces; i++)
 		{
 			face = trip->v3->faces[i];
+			vertex0 = face->verts[0];
+			vertex1 = face->verts[1];
+			vertex2 = face->verts[2];
 			for (int j = 0; j < 3; j++)
 			{
 				if (face->verts[j] == trip->v3)
@@ -1120,7 +1205,7 @@ private:
 		delete[](trip->v3->corners);
 		delete[](trip->v3->edges);
 		delete[](trip->v3->faces);
-		delete(trip->v2);
+		delete(trip->v3);
 
 		// check for duplicate faces and delete appropriate faces, vers, and pairs
 		Face* face1;
@@ -1490,8 +1575,8 @@ private:
 		std::cout << "# Faces = " << std::to_string(nfaces) << std::endl;
 		std::cout << "# Corners = " << std::to_string(ncorners) << std::endl;
 		int v_e_f = nverts - nedges + nfaces;
-		std::cout << "V-E+F = " << std::to_string(v_e_f) << std::endl << std::endl;
-		std::cout << "Geometric Error = " << std::to_string(total_error()) << std::endl;
+		std::cout << "V-E+F = " << std::to_string(v_e_f) << std::endl;
+		std::cout << "Geometric Error = " << std::to_string(total_error()) << std::endl << std::endl;
 	}
 
 // methods
@@ -1805,7 +1890,8 @@ public:
 	{
 		if (!TRI_MESH) { return; }
 
-		find_valid_pairs(mean_elength);
+		//find_valid_pairs(mean_elength);
+		find_connected_pairs();
 
 		// remove all corners and edges
 		for (int i = 0; i < nedges; i++)
@@ -1879,7 +1965,8 @@ public:
 	{
 		if (!TRI_MESH) { return; }
 
-		find_valid_trips(mean_elength);
+		//find_valid_trips(mean_elength);
+		find_connected_trips();
 
 		// remove all corners and edges
 		for (int i = 0; i < nedges; i++)
