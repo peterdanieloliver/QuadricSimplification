@@ -58,7 +58,7 @@ public:
 	// contraction containers
 	std::set<PairContraction*, PairCompare> cont_pairs;
 	std::set<TripContraction*, TripCompare> cont_trips;
-	double angle_tol = 0.5;
+	double angle_tol = -1.0;
 
 	// private helper functions
 private:
