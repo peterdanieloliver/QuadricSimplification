@@ -1,5 +1,9 @@
 #pragma once
-#include <QtOpenGL>
+//#include <QtOpenGL>
+#include <QVector2D>
+#include <QVector3D>
+#include <QQuaternion>
+#include <QtMath>
 
 class Trackball
 {

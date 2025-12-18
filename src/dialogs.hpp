@@ -1,6 +1,12 @@
 #pragma once
 
-#include <qdialog.h>
+#include <QDialog>
+#include <QLabel>
+#include <QComboBox>
+#include <QDoubleSpinBox>
+#include <QSpinBox>
+#include <QPushButton>
+#include <QGridLayout>
 
 class SmoothDialog : public QDialog
 {

@@ -1,13 +1,15 @@
 #pragma once
 
-#include <QtWidgets/QMainWindow>
-#include <qmenu.h>
-#include <qmenubar.h>
+#include <QMainWindow>
+#include <QMenu>
+#include <QMenuBar>
+#include <QString>
+#include <QFileDialog>
+#include <QTime>
 #include "window.hpp"
-#include <qstring.h>
-#include <iostream>
 #include "dialogs.hpp"
 #include "messagestream.hpp"
+#include <iostream>
 
 class MainWindow : public QMainWindow
 {

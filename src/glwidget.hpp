@@ -1,12 +1,13 @@
 #pragma once
 
-#include <qopenglwidget.h>
-#include <qopenglfunctions.h>
-#include <qsurfaceformat.h>
-#include <QtOpenGL>
-#include <GL/GLU.h>
-#include <qcolor.h>
-#include "Scene.hpp"
+#include <QOpenGLWidget>
+#include <QOpenGLFunctions>
+#include <QSurfaceFormat>
+#include <QColor>
+#include <QMatrix4x4>
+#include <QMouseEvent>
+#include <QWheelEvent>
+#include "scene.hpp"
 #include "trackball.hpp"
 
 #define MOUSE_NONE              1
@@ -185,8 +186,8 @@ private: // private helper functions
             return;
         }
 
-        GLuint selectBuf[1024];
-        glSelectBuffer(1024, selectBuf);
+        GLuint selectBuf[4096];
+        glSelectBuffer(4096, selectBuf);
         GLint hits;
         GLint viewport[4];
 
@@ -201,7 +202,7 @@ private: // private helper functions
         glLoadIdentity();
 
         // create a 5x5 pixel selection region
-        gluPickMatrix((GLdouble)x, (GLdouble)(viewport[3] - y), 1, 1, viewport);
+        gluPickMatrix((GLdouble)x, (GLdouble)(viewport[3] - y), 5.0, 5.0, viewport);
 
         setView(GL_SELECT);
         setTransforms(GL_SELECT);
@@ -245,20 +246,22 @@ private: // private helper functions
         bool needs_update = false;
 
         ptr = (GLuint*)buffer;
+        const double DEPTH_MAX = 4294967295.0; // 0xFFFFFFFF
+
         for (int i = 0; i < hits; i++)
         {
             needs_update = false;
             names = *ptr;
             ptr++;
 
-            current = (double)*ptr / 0x7fffffff;
+            current = (double)*ptr / DEPTH_MAX;
             if (current < shallowest)
             {
                 shallowest = current;
                 needs_update = true;
             }
             ptr++;
-            current = (double)*ptr / 0x7fffffff;
+            current = (double)*ptr / DEPTH_MAX;
             if (current < shallowest)
             {
                 shallowest = current;
@@ -305,7 +308,14 @@ protected: // protected methods
 
 	void resizeGL(int w, int h) override
 	{
-        glViewport((-w/2) , (-h/2), (w/2), (h/w));
+        /*glViewport((-w/2) , (-h/2), (w/2), (h/w));
+        aspectratio = (float)w / (float)h;
+        setView(GL_RENDER);*/
+
+        // set a normal viewport matching the widget size
+        if (w <= 0) w = 1;
+        if (h <= 0) h = 1;
+        glViewport(0, 0, w, h);
         aspectratio = (float)w / (float)h;
         setView(GL_RENDER);
 	}

@@ -1,10 +1,12 @@
 #pragma once
 
 #include "polyhedron.hpp"
-#include <QtOpenGL>
+//#include <QtOpenGL>
 #include <GL/GLU.h>
-#include <qmath.h>
-#include "stb_image.h"
+#include <QtMath>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 // display mode definitions
 #define DISPLAY_SOLID				1
